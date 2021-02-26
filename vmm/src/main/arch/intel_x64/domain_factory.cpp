@@ -32,3 +32,4 @@ std::unique_ptr<domain> domain_factory::make(domain::id_t domainid,
 }
 
 }
+
