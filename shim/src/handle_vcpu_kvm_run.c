@@ -266,6 +266,11 @@ pre_run_op(struct shim_vcpu_t *const pmut_vcpu, void *pmut_exit) NOEXCEPT
     platform_expects(NULL != pmut_vcpu->run);
     platform_expects(NULL != pmut_exit);
 
+    // TODO sync cr8
+    if (pmut_vcpu->run->cr8 != 0) {
+        bferror_x64("cr8 non zero (fixme)", pmut_vcpu->run->cr8);
+    }
+
     switch (pmut_vcpu->run->exit_reason) {
         case KVM_EXIT_IO: {
             return pre_run_op_io(pmut_vcpu, (struct mv_exit_io_t *)pmut_exit);
