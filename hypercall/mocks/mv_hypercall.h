@@ -1600,8 +1600,8 @@ extern "C"
     platform_expects(NULLPTR != pmut_val);
 #endif
 
-        *pmut_val = 0;
-        return 0;
+        *pmut_val = (uint64_t)0;
+        return (mv_status_t)0;
     }
 
     /**
@@ -1630,7 +1630,7 @@ extern "C"
     platform_expects((int32_t)MV_INVALID_ID != (int32_t)vsid);
 #endif
 
-        return 0;
+        return (mv_status_t)0;
     }
 
     /**
