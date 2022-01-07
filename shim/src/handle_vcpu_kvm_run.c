@@ -320,15 +320,6 @@ handle_vcpu_kvm_run(struct shim_vcpu_t *const pmut_vcpu) NOEXCEPT
         return return_failure(pmut_vcpu);
     }
 
-    bfdebug_x8("kvm_run: immediate_exit ", pmut_vcpu->run->immediate_exit);
-    if (pmut_vcpu->run->request_interrupt_window) {
-        bferror("kvm_run: user requested interrupt window");
-        pmut_vcpu->run->if_flag = (uint8_t)1;
-        pmut_vcpu->run->ready_for_interrupt_injection = (uint8_t)1;
-        pmut_vcpu->run->exit_reason = KVM_EXIT_IRQ_WINDOW_OPEN;
-        return SHIM_SUCCESS;
-    }
-
     pmut_mut_exit = shared_page_for_current_pp();
 
     while (0 == (int32_t)pmut_vcpu->run->immediate_exit) {
@@ -376,6 +367,15 @@ handle_vcpu_kvm_run(struct shim_vcpu_t *const pmut_vcpu) NOEXCEPT
 
             case mv_exit_reason_t_interrupt: {
                 continue;
+            }
+
+            case mv_exit_reason_t_interrupt_window: {
+                bferror("run: interrupt window exit");
+                platform_expects(pmut_vcpu->run->request_interrupt_window);
+                // pmut_vcpu->run->if_flag = (uint8_t)1;
+                pmut_vcpu->run->ready_for_interrupt_injection = (uint8_t)1;
+                pmut_vcpu->run->exit_reason = KVM_EXIT_IRQ_WINDOW_OPEN;
+                return SHIM_SUCCESS;
             }
 
             case mv_exit_reason_t_nmi: {

@@ -60,10 +60,12 @@ enum mv_exit_reason_t
         mv_exit_reason_t_msr = 5,
         /** @brief an interrupt event has occurred */
         mv_exit_reason_t_interrupt = 6,
+        /** @brief an interrupt window event has occurred */
+        mv_exit_reason_t_interrupt_window = 7,
         /** @brief an nmi event has occurred */
-        mv_exit_reason_t_nmi = 7,
+        mv_exit_reason_t_nmi = 8,
         /** @brief a shutdown event has occurred */
-        mv_exit_reason_t_shutdown = 8,
+        mv_exit_reason_t_shutdown = 9,
     };
 
     /**
