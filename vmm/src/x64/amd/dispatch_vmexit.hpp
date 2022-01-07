@@ -68,6 +68,8 @@ namespace microv
     constexpr auto EXIT_REASON_CR0_SPECIAL{0x65_u64};
     /// @brief defines the CPUID exit reason code
     constexpr auto EXIT_REASON_CPUID{0x72_u64};
+    /// @brief defines the halt exit reason code
+    constexpr auto EXIT_REASON_HLT{0x78_u64};
     /// @brief defines the IO exit reason code
     constexpr auto EXIT_REASON_IO{0x7B_u64};
     /// @brief defines the SHUTDOWN exit reason code
@@ -228,6 +230,12 @@ namespace microv
                     mut_vp_pool,
                     mut_vs_pool,
                     vsid);
+                break;
+            }
+
+            case EXIT_REASON_HLT.get(): {
+                set_reg_return(mut_sys, hypercall::MV_STATUS_SUCCESS);
+                set_reg0(mut_sys, bsl::to_u64(hypercall::EXIT_REASON_HLT));
                 break;
             }
 
