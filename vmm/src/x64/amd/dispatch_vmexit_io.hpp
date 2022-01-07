@@ -44,6 +44,23 @@
 
 namespace microv
 {
+    constexpr auto PORT_FASTA20{0x92_u64};
+
+    constexpr void
+    emulate_io_quirks(hypercall::mv_exit_io_t &mut_exit_io) noexcept
+    {
+        switch(mut_exit_io.addr) {
+        case PORT_FASTA20.get(): {
+            // Clear bit 0 to prevent a reset from qemu
+            // See: qemu/hw/i386/port92.c:36
+            mut_exit_io.data &= ~(0x1UL);
+            break;
+        }
+        default:
+            break;
+        }
+    }
+
     /// <!-- description -->
     ///   @brief Dispatches IO VMExits.
     ///
@@ -177,6 +194,8 @@ namespace microv
         else {
             mut_exit_io->reps = bsl::safe_u64::magic_1().get();
         }
+
+        emulate_io_quirks(*mut_exit_io);
 
         set_reg_return(mut_sys, hypercall::MV_STATUS_SUCCESS);
         set_reg0(mut_sys, bsl::to_u64(hypercall::EXIT_REASON_IO));
