@@ -366,6 +366,13 @@ handle_vcpu_kvm_run(struct shim_vcpu_t *const pmut_vcpu) NOEXCEPT
             }
 
             case mv_exit_reason_t_interrupt: {
+                release_shared_page_for_current_pp();
+                if (platform_interrupted()) {
+                    pmut_vcpu->run->exit_reason = KVM_EXIT_INTR;
+                    mut_ret = SHIM_INTERRUPTED;
+                    goto ret;
+                }
+                pmut_mut_exit = shared_page_for_current_pp();
                 continue;
             }
 
@@ -405,5 +412,6 @@ handle_vcpu_kvm_run(struct shim_vcpu_t *const pmut_vcpu) NOEXCEPT
 release_shared_page:
     release_shared_page_for_current_pp();
 
+ret:
     return mut_ret;
 }
