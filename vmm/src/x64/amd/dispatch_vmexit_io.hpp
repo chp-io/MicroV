@@ -109,17 +109,18 @@ namespace microv
         constexpr auto sz08_shft{4_u64};
 
         auto const addr{(exitinfo1 & port_mask) >> port_shft};
-        constexpr auto port_bareflank{0xbf_u64};
-        if (bsl::unlikely(addr == port_bareflank)) {
-            constexpr auto data_mask{0x00000000FFFFFFFF_u64};
-            auto const data{data_mask & rax};
-            bsl::error() << bsl::endl              // --
-                         << "-- BAREFLANK IO: "    // --
-                         << bsl::hex(data)         // --
-                         << bsl::endl              // --
-                         << bsl::endl;             // --
-            return vmexit_success_advance_ip_and_run;
-        }
+
+        // constexpr auto port_bareflank{0xbf_u64};
+        // if (bsl::unlikely(addr == port_bareflank)) {
+        //     constexpr auto data_mask{0x00000000FFFFFFFF_u64};
+        //     auto const data{data_mask & rax};
+        //     bsl::error() << bsl::endl              // --
+        //                  << "-- BAREFLANK IO: "    // --
+        //                  << bsl::hex(data)         // --
+        //                  << bsl::endl              // --
+        //                  << bsl::endl;             // --
+        //     return vmexit_success_advance_ip_and_run;
+        // }
 
         // ---------------------------------------------------------------------
         // Context: Change To Root VM
