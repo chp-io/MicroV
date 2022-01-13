@@ -57,6 +57,8 @@
 #include <handle_vm_kvm_destroy_vcpu.h>
 #include <handle_vm_kvm_get_clock.h>
 #include <handle_vm_kvm_set_clock.h>
+#include <handle_vm_kvm_get_irqchip.h>
+#include <handle_vm_kvm_set_irqchip.h>
 #include <handle_vm_kvm_set_user_memory_region.h>
 #include <linux/anon_inodes.h>
 #include <linux/kernel.h>
@@ -653,10 +655,25 @@ dispatch_vm_kvm_get_dirty_log(struct kvm_dirty_log *const ioctl_args)
 }
 
 static long
-dispatch_vm_kvm_get_irqchip(struct kvm_irqchip *const ioctl_args)
+dispatch_vm_kvm_get_irqchip(
+    struct shim_vm_t *const pmut_vm, struct kvm_irqchip *const user_args)
 {
-    (void)ioctl_args;
-    return -EINVAL;
+    {
+        struct kvm_irqchip mut_args;
+        uint64_t const size = sizeof(mut_args);
+
+        if (handle_vm_kvm_get_irqchip(pmut_vm, &mut_args)) {
+            bferror("handle_vm_kvm_get_irqchip failed");
+            return -EINVAL;
+        }
+
+        if (platform_copy_to_user(user_args, &mut_args, size)) {
+            bferror("platform_copy_to_user failed");
+            return -EINVAL;
+        }
+
+        return SHIM_SUCCESS;
+    }
 }
 
 static long
@@ -753,10 +770,27 @@ dispatch_vm_kvm_set_identity_map_addr(uint64_t *const ioctl_args)
 }
 
 static long
-dispatch_vm_kvm_set_irqchip(struct kvm_irqchip *const ioctl_args)
+dispatch_vm_kvm_set_irqchip(
+    struct shim_vm_t *const pmut_vm, struct kvm_irqchip *const user_args)
 {
-    (void)ioctl_args;
-    return -EINVAL;
+    struct kvm_irqchip mut_args;
+    uint64_t const size = sizeof(mut_args);
+
+    if (NULL == user_args) {
+        bferror("user_args are null");
+        return -EINVAL;
+    }
+
+    if (platform_copy_from_user(&mut_args, user_args, size)) {
+        bferror("platform_copy_from_user failed");
+        return -EINVAL;
+    }
+
+    if (handle_vm_kvm_set_irqchip(pmut_vm, &mut_args)) {
+        bferror("handle_vm_kvm_set_irqchip failed");
+        return -EINVAL;
+    }
+    return SHIM_SUCCESS;
 }
 
 static long
@@ -881,7 +915,7 @@ dev_unlocked_ioctl_vm(
 
         case KVM_GET_IRQCHIP: {
             return dispatch_vm_kvm_get_irqchip(
-                (struct kvm_irqchip *)ioctl_args);
+                pmut_mut_vm, (struct kvm_irqchip *)ioctl_args);
         }
 
         case KVM_GET_PIT2: {
@@ -947,7 +981,7 @@ dev_unlocked_ioctl_vm(
 
         case KVM_SET_IRQCHIP: {
             return dispatch_vm_kvm_set_irqchip(
-                (struct kvm_irqchip *)ioctl_args);
+                pmut_mut_vm, (struct kvm_irqchip *)ioctl_args);
         }
 
         case KVM_SET_PIT2: {
