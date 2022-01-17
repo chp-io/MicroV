@@ -669,7 +669,13 @@ namespace microv
             m_assigned_vmid = {};
             m_allocated = allocated_status_t::deallocated;
             m_status = running_status_t::initial;
-            m_interrupt_queue = {};
+
+            // Don't just assign {} to the interrupt queue here, it blows up
+            // the stack frame.
+            while(!m_interrupt_queue.empty()) {
+                bsl::safe_u64 mut_junk;
+                (void)m_interrupt_queue.pop(mut_junk);
+            }
 
             if (!sys.is_vs_a_root_vs(this->id())) {
                 bsl::debug<bsl::V>()                                   // --
