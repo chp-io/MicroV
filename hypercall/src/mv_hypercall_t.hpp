@@ -1565,6 +1565,36 @@ namespace hypercall
         }
 
         /// <!-- description -->
+        ///   @brief Injects the next queued interrupt in the VS. The interrupt
+        ///     window must be open.
+        ///
+        /// <!-- inputs/outputs -->
+        ///   @param vsid The ID of the VS to inject the queued interrupt into
+        ///   @return Returns MV_STATUS_SUCCESS on success, MV_STATUS_FAILURE_UNKNOWN
+        ///     and friends on failure.
+        ///
+        [[nodiscard]] constexpr auto
+        mv_vs_op_inject_next_interrupt(bsl::safe_u16 const vsid) noexcept
+            -> bsl::errc_type
+        {
+            bsl::expects(vsid.is_valid_and_checked());
+            bsl::expects(vsid != MV_INVALID_ID);
+
+            mv_status_t const ret{
+                mv_vs_op_inject_next_interrupt_impl(m_hndl.get(), vsid.get())};
+            if (bsl::unlikely(ret != MV_STATUS_SUCCESS)) {
+                bsl::error() << "mv_vs_op_inject_next_interrupt failed with status "    // --
+                             << bsl::hex(ret)                                     // --
+                             << bsl::endl                                         // --
+                             << bsl::here();                                      // --
+
+                return bsl::errc_failure;
+            }
+
+            return bsl::errc_success;
+        }
+
+        /// <!-- description -->
         ///   @brief Returns the frequency of the VS.
         ///
         /// <!-- inputs/outputs -->

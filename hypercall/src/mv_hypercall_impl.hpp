@@ -588,6 +588,18 @@ namespace hypercall
         -> mv_status_t::value_type;
 
     /// <!-- description -->
+    ///   @brief Implements the ABI for mv_vs_op_inject_next_interrupt.
+    ///
+    /// <!-- inputs/outputs -->
+    ///   @param reg0_in n/a
+    ///   @param reg1_in n/a
+    ///   @return n/a
+    ///
+    extern "C" [[nodiscard]] auto mv_vs_op_inject_next_interrupt_impl(
+        uint64_t const reg0_in, uint16_t const reg1_in) noexcept
+        -> mv_status_t::value_type;
+
+    /// <!-- description -->
     ///   @brief Implements the ABI for mv_vs_op_tsc_get_khz.
     ///
     /// <!-- inputs/outputs -->

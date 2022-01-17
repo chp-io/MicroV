@@ -554,6 +554,8 @@ NODISCARD static inline int
 #define MV_VS_OP_TSC_GET_KHZ_IDX_VAL ((uint64_t)0x0000000000000027)
 /** @brief Defines the index for mv_vs_op_tsc_set_khz */
 #define MV_VS_OP_TSC_SET_KHZ_IDX_VAL ((uint64_t)0x0000000000000028)
+/** @brief Defines the index for mv_vs_op_inject_next_interrupt */
+#define MV_VS_OP_INJECT_NEXT_INTERRUPT_IDX_VAL ((uint64_t)0x0000000000000031)
 
 #ifdef __cplusplus
 }

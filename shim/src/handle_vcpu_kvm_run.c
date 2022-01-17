@@ -287,6 +287,12 @@ pre_run_op(struct shim_vcpu_t *const pmut_vcpu, void *const pmut_exit) NOEXCEPT
             return SHIM_SUCCESS;
         }
 
+    case KVM_EXIT_IRQ_WINDOW_OPEN: {
+        bferror("injecting interrupt...");
+        mv_vs_op_inject_next_interrupt(g_mut_hndl, pmut_vcpu->vsid);
+        bferror("injection complete");
+        return SHIM_SUCCESS;
+    };
         default: {
             break;
         }

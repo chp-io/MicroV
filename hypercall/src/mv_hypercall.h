@@ -1441,6 +1441,36 @@ extern "C"
 
     /**
      * <!-- description -->
+     *   @brief Injects the next queued interrupt into the VS. The interrupt
+     *     window must be open.
+     *
+     * <!-- inputs/outputs -->
+     *   @param hndl Set to the result of mv_handle_op_open_handle
+     *   @param vsid The ID of the VS to inject the interrupt into
+     *   @return Returns MV_STATUS_SUCCESS on success, MV_STATUS_FAILURE_UNKNOWN
+     *     and friends on failure.
+     */
+    NODISCARD static inline mv_status_t
+    mv_vs_op_inject_next_interrupt(
+        uint64_t const hndl, uint16_t const vsid) NOEXCEPT
+    {
+        mv_status_t mut_ret;
+
+        platform_expects(MV_INVALID_HANDLE != hndl);
+        platform_expects(hndl > ((uint64_t)0));
+        platform_expects((int32_t)MV_INVALID_ID != (int32_t)vsid);
+
+        mut_ret = mv_vs_op_inject_next_interrupt_impl(hndl, vsid);
+        if (mut_ret) {
+            bferror("mv_vs_op_inject_next_interrupt failed");
+            return mut_ret;
+        }
+
+        return mut_ret;
+    }
+
+    /**
+     * <!-- description -->
      *   @brief Returns the frequency of the VS.
      *
      * <!-- inputs/outputs -->

@@ -545,6 +545,8 @@ namespace hypercall
     constexpr auto MV_VS_OP_CLOCK_GET{0x0000000000000029_u64};
     /// @brief Defines the index for mv_vs_op_clock_set
     constexpr auto MV_VS_OP_CLOCK_SET{0x0000000000000030_u64};
+    /// @brief Defines the index for mv_vs_op_queue_interrupt
+    constexpr auto MV_VS_OP_INJECT_NEXT_INTERRUPT_IDX_VAL{0x0000000000000031_u64};
 }
 
 #endif
