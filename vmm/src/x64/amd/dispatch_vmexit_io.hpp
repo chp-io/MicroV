@@ -90,6 +90,8 @@ namespace microv
         auto const rax{mut_sys.bf_tls_rax()};
         auto const rcx{mut_sys.bf_tls_rcx()};
 
+        constexpr auto page_mask{0xFFFFFFFFFFFFF000_u64};
+
         constexpr auto port_mask{0xFFFF0000_u64};
         constexpr auto port_shft{16_u64};
         constexpr auto reps_mask{0x00000008_u64};
@@ -108,8 +110,10 @@ namespace microv
 
         auto const addr{(exitinfo1 & port_mask) >> port_shft};
 
-        bsl::safe_u64 mut_gpa{};
-        bsl::safe_u64 mut_spa{};
+        constexpr auto max_spa{2_u64};
+        auto mut_num_spa{1_u64};
+        bsl::array<bsl::safe_u64, max_spa.get()> mut_spas;
+
         bsl::safe_u64 mut_bytes{};
         enum hypercall::mv_bit_size_t mut_size{};
         auto mut_reps{bsl::safe_u64::magic_1()};
@@ -119,35 +123,6 @@ namespace microv
 
         // bsl::debug() << "exitinfo1 = " << bsl::hex(exitinfo1) << bsl::endl;
 
-
-        if (((exitinfo1 & strn_mask) >> strn_shft).is_pos()) {
-            auto string_addr{mut_sys.bf_tls_rdi()};
-
-            if (((exitinfo1 & type_mask) >> type_shft).is_zero()) {
-                // OUT instruction
-                string_addr = mut_sys.bf_tls_rsi();
-            }
-            else {
-                // IN instruction
-                string_addr = mut_sys.bf_tls_rdi();
-            }
-
-            // bsl::debug() << "Got string operation, string_addr = " << bsl::hex(string_addr) << bsl::endl;
-
-            //
-            //FIXME: This doesn't consider 16-bit segment base values!!
-            //
-            auto const translation{mut_vs_pool.gla_to_gpa(mut_sys, mut_tls, mut_page_pool, mut_pp_pool, mut_vm_pool, string_addr, vsid)};
-            mut_gpa = translation.paddr;
-            // bsl::debug() << "string_addr = " << bsl::hex(string_addr) << " gpa = " << bsl::hex(mut_gpa) << bsl::endl;
-            mut_spa = mut_vm_pool.gpa_to_spa(mut_tls, mut_sys, mut_page_pool, mut_gpa, vmid);
-            // bsl::debug() << "string_addr = " << bsl::hex(string_addr) << " gpa = " << bsl::hex(mut_gpa) << " spa = " << bsl::hex(mut_spa) << bsl::endl;
-
-            mut_vs_pool.io_set_spa(mut_sys, vsid, mut_spa);
-        }
-        else {
-            bsl::touch();
-        }
 
         if (((exitinfo1 & reps_mask) >> reps_shft).is_pos()) {
             mut_reps = rcx.get();
@@ -168,6 +143,50 @@ namespace microv
         else if (((exitinfo1 & sz08_mask) >> sz08_shft).is_pos()) {
             mut_size = hypercall::mv_bit_size_t::mv_bit_size_t_8;
             mut_bytes = mut_reps;
+        }
+        else {
+            bsl::touch();
+        }
+
+        mut_num_spa = mut_bytes >> HYPERVISOR_PAGE_SHIFT;
+        if ((mut_bytes & page_mask) > bsl::safe_u64::magic_0()) {
+            mut_num_spa = (mut_num_spa + bsl::safe_u64::magic_1()).checked();
+        }
+        else {
+            bsl::touch();
+        }
+
+        if (((exitinfo1 & strn_mask) >> strn_shft).is_pos()) {
+            auto string_addr{mut_sys.bf_tls_rdi()};
+
+            if (((exitinfo1 & type_mask) >> type_shft).is_zero()) {
+                // OUT instruction
+                string_addr = mut_sys.bf_tls_rsi();
+            }
+            else {
+                // IN instruction
+                string_addr = mut_sys.bf_tls_rdi();
+            }
+
+            bsl::debug() << "Got string operation, string_addr = " << bsl::hex(string_addr) << bsl::endl;
+
+            for (auto mut_i{0_idx}; mut_i < mut_num_spa; ++mut_i) {
+                bsl::safe_u64 mut_spa{};
+                bsl::safe_u64 mut_gpa{};
+                //
+                //FIXME: This doesn't consider 16-bit segment base values!!
+                //
+                auto const translation{mut_vs_pool.gla_to_gpa(mut_sys, mut_tls, mut_page_pool, mut_pp_pool, mut_vm_pool, string_addr, vsid)};
+                mut_gpa = translation.paddr;
+                // bsl::debug() << "string_addr = " << bsl::hex(string_addr) << " gpa = " << bsl::hex(mut_gpa) << bsl::endl;
+                mut_spa = mut_vm_pool.gpa_to_spa(mut_tls, mut_sys, mut_page_pool, mut_gpa, vmid);
+                // bsl::debug() << "string_addr = " << bsl::hex(string_addr) << " gpa = " << bsl::hex(mut_gpa) << " spa = " << bsl::hex(mut_spa) << bsl::endl;
+                *mut_spas.at_if(mut_i) = mut_spa;
+            }
+
+            mut_vs_pool.io_set_spa(mut_sys, vsid, *mut_spas.at_if(0_idx));
+
+
         }
         else {
             bsl::touch();
@@ -215,22 +234,18 @@ namespace microv
         if (((exitinfo1 & strn_mask) >> strn_shft).is_pos()) {
             using page_t = bsl::array<uint8_t, HYPERVISOR_PAGE_SIZE.get()>;
 
+            bsl::safe_idx mut_i{};
+            bsl::safe_u64 mut_spa{*mut_spas.at_if(mut_i)};
+
             if (bsl::unlikely(mut_spa.is_invalid())) {
                 bsl::error() << bsl::here();
                 return vmexit_failure_advance_ip_and_run;
             }
 
-            constexpr auto gpa_mask{0xFFFFFFFFFFFFF000_u64};
-            auto const page{mut_pp_pool.map<page_t>(mut_sys, mut_spa & gpa_mask)};
-
-            auto const idx{mut_spa & ~gpa_mask};
-
-            // TODO handle page boundary
-            auto const bytes_left{(HYPERVISOR_PAGE_SIZE - idx).checked()};
-            if (bsl::unlikely(bytes_left < mut_bytes)) {
+            auto const idx{mut_spa & ~page_mask};
+            if (bsl::unlikely(hypercall::MV_RUN_MAX_IOMEM_SIZE < mut_bytes)) {
                 bsl::error()
-                    << "WARNING: page boundary overflow: "    // --
-                    << " bytes_left = " << bsl::hex(bytes_left)
+                    << "FIXME: mv_run_t.iomem will overflow:"    // --
                     << " mut_bytes = " << bsl::hex(mut_bytes)
                     << bsl::endl                          // --
                     << bsl::here();                       // --
@@ -241,20 +256,46 @@ namespace microv
                 bsl::touch();
             }
 
-            auto const data{page.span(idx, mut_bytes)};
-            if (bsl::unlikely(data.is_invalid())) {
-                bsl::error()
-                    << "data is invalid"    // --
-                    << bsl::endl            // --
-                    << bsl::here();         // --
+            auto const bytes_cur_page{(HYPERVISOR_PAGE_SIZE - idx).checked()};
+            {
+                auto const size{bytes_cur_page.min(mut_bytes)};
+                auto const page{mut_pp_pool.map<page_t>(mut_sys, mut_spa & page_mask)};
+                auto const data{page.span(idx, size)};
+                if (bsl::unlikely(data.is_invalid())) {
+                    bsl::error()
+                        << "data is invalid"    // --
+                        << bsl::endl            // --
+                        << bsl::here();         // --
 
-                return vmexit_failure_advance_ip_and_run;
-            }
-            else {
-                bsl::touch();
+                    return vmexit_failure_advance_ip_and_run;
+                }
+                else {
+                    bsl::touch();
+                }
+
+                bsl::builtin_memcpy(mut_exit_io->data.data(), data.data(), size);
             }
 
-            bsl::builtin_memcpy(mut_exit_io->data.data(), data.data(), data.size_bytes());
+            // if (bsl::unlikely(bytes_cur_page < mut_bytes)) {
+            //     auto const page{mut_pp_pool.map<page_t>(mut_sys, mut_spa1 & page_mask)};
+            //     auto const data{page.span(idx, mut_bytes)};
+            //     if (bsl::unlikely(data.is_invalid())) {
+            //         bsl::error()
+            //             << "data is invalid"    // --
+            //             << bsl::endl            // --
+            //             << bsl::here();         // --
+
+            //         return vmexit_failure_advance_ip_and_run;
+            //     }
+            //     else {
+            //         bsl::touch();
+            //     }
+
+            //     bsl::builtin_memcpy(mut_exit_io->data.data(), data.data(), data.size_bytes());
+            // }
+            // else {
+            //     bsl::touch();
+            // }
         }
         else {
             hypercall::io_to_u64(mut_exit_io->data) = rax.get();
