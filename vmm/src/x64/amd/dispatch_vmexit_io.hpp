@@ -110,9 +110,7 @@ namespace microv
 
         auto const addr{(exitinfo1 & port_mask) >> port_shft};
 
-        constexpr auto max_spa{2_u64};
-        auto mut_num_spa{1_u64};
-        bsl::array<bsl::safe_u64, max_spa.get()> mut_spas;
+        auto mut_num_pages{1_u64};
 
         bsl::safe_u64 mut_bytes{};
         enum hypercall::mv_bit_size_t mut_size{};
@@ -148,45 +146,50 @@ namespace microv
             bsl::touch();
         }
 
-        mut_num_spa = mut_bytes >> HYPERVISOR_PAGE_SHIFT;
-        if ((mut_bytes & page_mask) > bsl::safe_u64::magic_0()) {
-            mut_num_spa = (mut_num_spa + bsl::safe_u64::magic_1()).checked();
-        }
-        else {
-            bsl::touch();
-        }
-
         if (((exitinfo1 & strn_mask) >> strn_shft).is_pos()) {
-            auto string_addr{mut_sys.bf_tls_rdi()};
+            bsl::safe_u64 mut_string_addr{};
 
             if (((exitinfo1 & type_mask) >> type_shft).is_zero()) {
                 // OUT instruction
-                string_addr = mut_sys.bf_tls_rsi();
+                mut_string_addr = mut_sys.bf_tls_rsi();
             }
             else {
                 // IN instruction
-                string_addr = mut_sys.bf_tls_rdi();
+                mut_string_addr = mut_sys.bf_tls_rdi();
             }
 
-            bsl::debug() << "Got string operation, string_addr = " << bsl::hex(string_addr) << bsl::endl;
+            mut_num_pages = (bsl::safe_u64::magic_1()).checked();
+            auto const end_addr{(mut_string_addr + mut_bytes).checked()};
+            mut_num_pages += (end_addr >> HYPERVISOR_PAGE_SHIFT) - (mut_string_addr >> HYPERVISOR_PAGE_SHIFT);
+            mut_num_pages = mut_num_pages.checked();
+            if (mut_num_pages > bsl::safe_u64::magic_2()) {
+                bsl::error() << "Too many pages: " << mut_num_pages << bsl::endl;
+                mut_num_pages = bsl::safe_u64::magic_2();
+            }
+            else {
+                bsl::touch();
+            }
 
-            for (auto mut_i{0_idx}; mut_i < mut_num_spa; ++mut_i) {
+            bsl::debug()
+                << "Got string operation, mut_string_addr = "
+                << bsl::hex(mut_string_addr)
+                << " mut_num_pages "
+                << mut_num_pages
+                << bsl::endl;
+
+            for (auto mut_i{0_idx}; mut_i < mut_num_pages; ++mut_i) {
                 bsl::safe_u64 mut_spa{};
                 bsl::safe_u64 mut_gpa{};
                 //
                 //FIXME: This doesn't consider 16-bit segment base values!!
                 //
-                auto const translation{mut_vs_pool.gla_to_gpa(mut_sys, mut_tls, mut_page_pool, mut_pp_pool, mut_vm_pool, string_addr, vsid)};
+                auto const translation{mut_vs_pool.gla_to_gpa(mut_sys, mut_tls, mut_page_pool, mut_pp_pool, mut_vm_pool, mut_string_addr, vsid)};
                 mut_gpa = translation.paddr;
-                // bsl::debug() << "string_addr = " << bsl::hex(string_addr) << " gpa = " << bsl::hex(mut_gpa) << bsl::endl;
+                bsl::debug() << "mut_string_addr = " << bsl::hex(mut_string_addr) << " gpa = " << bsl::hex(mut_gpa) << bsl::endl;
                 mut_spa = mut_vm_pool.gpa_to_spa(mut_tls, mut_sys, mut_page_pool, mut_gpa, vmid);
-                // bsl::debug() << "string_addr = " << bsl::hex(string_addr) << " gpa = " << bsl::hex(mut_gpa) << " spa = " << bsl::hex(mut_spa) << bsl::endl;
-                *mut_spas.at_if(mut_i) = mut_spa;
+                bsl::debug() << "mut_string_addr = " << bsl::hex(mut_string_addr) << " gpa = " << bsl::hex(mut_gpa) << " spa = " << bsl::hex(mut_spa) << bsl::endl;
+                mut_vs_pool.io_set_spa(mut_sys, vsid, mut_spa, mut_i);
             }
-
-            mut_vs_pool.io_set_spa(mut_sys, vsid, *mut_spas.at_if(0_idx));
-
-
         }
         else {
             bsl::touch();
@@ -235,7 +238,7 @@ namespace microv
             using page_t = bsl::array<uint8_t, HYPERVISOR_PAGE_SIZE.get()>;
 
             bsl::safe_idx mut_i{};
-            bsl::safe_u64 mut_spa{*mut_spas.at_if(mut_i)};
+            bsl::safe_u64 mut_spa{mut_vs_pool.io_spa(mut_sys, vsid, mut_i)};
 
             if (bsl::unlikely(mut_spa.is_invalid())) {
                 bsl::error() << bsl::here();
@@ -246,10 +249,18 @@ namespace microv
             if (bsl::unlikely(hypercall::MV_RUN_MAX_IOMEM_SIZE < mut_bytes)) {
                 bsl::error()
                     << "FIXME: mv_run_t.iomem will overflow:"    // --
-                    << " mut_bytes = " << bsl::hex(mut_bytes)
-                    << bsl::endl                          // --
-                    << bsl::here();                       // --
-
+                    << " mut_bytes = " << bsl::hex(mut_bytes)    // --
+                    << bsl::endl                                 // --
+                    << bsl::here();                              // --
+                return vmexit_failure_advance_ip_and_run;
+            }
+            else if (bsl::unlikely(hypercall::MV_EXIT_IO_MAX_DATA < mut_bytes)) {
+                bsl::error()
+                    << "FIXME: mv_exit_io_t.data will overflow:"    // --
+                    << " mut_bytes = "                              // --
+                    << bsl::hex(mut_bytes)                          // --
+                    << bsl::endl                                    // --
+                    << bsl::here();                                 // --
                 return vmexit_failure_advance_ip_and_run;
             }
             else {
@@ -260,6 +271,7 @@ namespace microv
             {
                 auto const size{bytes_cur_page.min(mut_bytes)};
                 auto const page{mut_pp_pool.map<page_t>(mut_sys, mut_spa & page_mask)};
+                bsl::debug() << " idx " << bsl::hex(idx) << " size " << bsl::hex(size) << bsl::endl;
                 auto const data{page.span(idx, size)};
                 if (bsl::unlikely(data.is_invalid())) {
                     bsl::error()
@@ -276,8 +288,11 @@ namespace microv
                 bsl::builtin_memcpy(mut_exit_io->data.data(), data.data(), size);
             }
 
-            // if (bsl::unlikely(bytes_cur_page < mut_bytes)) {
-            //     auto const page{mut_pp_pool.map<page_t>(mut_sys, mut_spa1 & page_mask)};
+            if (bsl::unlikely(bytes_cur_page < mut_bytes)) {
+                bsl::debug() << "mut_num_pages " << mut_num_pages << bsl::endl;
+                bsl::error() << "page boundary" << bsl::endl;
+                return vmexit_failure_advance_ip_and_run;
+            // auto const page{mut_pp_pool.map<page_t>(mut_sys, mut_spa1 & page_mask)};
             //     auto const data{page.span(idx, mut_bytes)};
             //     if (bsl::unlikely(data.is_invalid())) {
             //         bsl::error()
@@ -295,7 +310,7 @@ namespace microv
             // }
             // else {
             //     bsl::touch();
-            // }
+            }
         }
         else {
             hypercall::io_to_u64(mut_exit_io->data) = rax.get();

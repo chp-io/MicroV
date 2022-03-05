@@ -158,11 +158,23 @@ namespace hypercall
             integration::verify(pmut_exit_io->type == expected_type);
             integration::verify(pmut_exit_io->size == expected_size_32);
 
-            // REP prefix
+            // Verify REP prefix works
             mut_exit_reason = integration::run_until_non_interrupt_exit(vsid);
             integration::verify(mut_exit_reason == mv_exit_reason_t::mv_exit_reason_t_io);
             integration::verify(pmut_exit_io->addr == expected_addr);
             integration::verify(pmut_exit_io->reps == expected_data_size);
+            integration::verify(pmut_exit_io->type == expected_type);
+            integration::verify(pmut_exit_io->size == expected_size_8);
+            for (auto mut_i{0_idx}; mut_i < expected_data.size(); ++mut_i) {
+                integration::verify(*pmut_exit_io->data.at_if(mut_i) == *expected_data.at_if(mut_i));
+            }
+
+            // Verify page boudary works
+            constexpr auto expected_big_data_size{MV_RUN_MAX_IOMEM_SIZE};
+            mut_exit_reason = integration::run_until_non_interrupt_exit(vsid);
+            integration::verify(mut_exit_reason == mv_exit_reason_t::mv_exit_reason_t_io);
+            integration::verify(pmut_exit_io->addr == expected_addr);
+            integration::verify(pmut_exit_io->reps == expected_big_data_size);
             integration::verify(pmut_exit_io->type == expected_type);
             integration::verify(pmut_exit_io->size == expected_size_8);
             for (auto mut_i{0_idx}; mut_i < expected_data.size(); ++mut_i) {

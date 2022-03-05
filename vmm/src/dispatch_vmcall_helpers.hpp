@@ -1779,44 +1779,51 @@ namespace microv
             bsl::touch();
         }
 
-        auto const bytes{bsl::to_u64(run.num_iomem)};
-        if (bytes > bsl::safe_u64::magic_0()) {
+        auto const num_iomem{bsl::to_u64(run.num_iomem)};
+        if (num_iomem > bsl::safe_u64::magic_0()) {
+            constexpr auto page_mask{0xFFFFFFFFFFFFF000_u64};
+
             using page_t = bsl::array<uint8_t, HYPERVISOR_PAGE_SIZE.get()>;
 
-            auto const spa{mut_vs_pool.io_spa(mut_sys, vsid)};
-            if (bsl::unlikely(spa.is_invalid())) {
+            bsl::safe_idx mut_i{};
+            auto const spa0{mut_vs_pool.io_spa(mut_sys, vsid, mut_i)};
+            auto const spa1{mut_vs_pool.io_spa(mut_sys, vsid, ++mut_i)};
+
+            if (bsl::unlikely(spa0.is_invalid())) {
                 bsl::error() << bsl::here();
                 return bsl::errc_failure;
             }
-
-            constexpr auto gpa_mask{0xFFFFFFFFFFFFF000_u64};
-            auto const page{mut_pp_pool.map<page_t>(mut_sys, spa & gpa_mask)};
-
-            // TODO handle page boundary
-            auto const idx{spa & ~gpa_mask};
-            auto const bytes_left{(HYPERVISOR_PAGE_SIZE - idx).checked()};
-            if (bsl::unlikely(bytes_left < bytes)) {
-                bsl::error()
-                    << "FIXME: page boundary overflow"    // --
-                    << bsl::endl                          // --
-                    << bsl::here();                       // --
-                return bsl::errc_failure;
+            else {
+                bsl::touch();
             }
 
-            auto mut_data{page.span(idx, bytes)};
-            if (bsl::unlikely(mut_data.is_invalid())) {
-                bsl::error()
-                    << "data is invalid"    // --
-                    << bsl::endl            // --
-                    << bsl::here();         // --
-                return bsl::errc_failure;
+            {
+                auto const page{mut_pp_pool.map<page_t>(mut_sys, spa0 & page_mask)};
+
+                auto const idx{spa0 & ~page_mask};
+                auto const size{num_iomem.min((HYPERVISOR_PAGE_SIZE - idx).checked())};
+                auto mut_data{page.span(idx, size)};
+                if (bsl::unlikely(mut_data.is_invalid())) {
+                    bsl::error()
+                        << "data is invalid"    // --
+                        << bsl::endl            // --
+                        << bsl::here();         // --
+                    return bsl::errc_failure;
+                }
+
+                bsl::builtin_memcpy(mut_data.data(), run.iomem.data(), mut_data.size_bytes());
             }
 
-            bsl::builtin_memcpy(mut_data.data(), run.iomem.data(), mut_data.size_bytes());
+            {
+                // TODO: spa1
+            }
         }
         else {
             bsl::touch();
         }
+        bsl::safe_idx mut_i{};
+        mut_vs_pool.io_set_spa(mut_sys, vsid, {}, mut_i);
+        mut_vs_pool.io_set_spa(mut_sys, vsid, {}, ++mut_i);
 
         return bsl::errc_success;
     }

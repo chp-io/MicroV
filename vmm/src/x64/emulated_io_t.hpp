@@ -50,8 +50,11 @@ namespace microv
     {
         /// @brief stores the ID of the VS associated with this emulated_io_t
         bsl::safe_u16 m_assigned_vsid{};
-        /// @brief stores the SPA destination of a string IO read intercept
-        bsl::safe_u64 m_spa{};
+        /// @brief stores the maximum number of storable SPAs
+        static constexpr auto max_spa{2_u64};
+        /// @brief stores the SPAs of a string IO read intercept
+        bsl::array<bsl::safe_u64, max_spa.get()> m_mut_spas{
+            bsl::safe_u64::failure(), bsl::safe_u64::failure()};
 
     public:
         /// <!-- description -->
@@ -135,13 +138,14 @@ namespace microv
         ///     second time prior to resuming a guest.
         ///
         /// <!-- inputs/outputs -->
+        ///   @param idx the idx to set the spa into
         ///   @return Returns the cached SPA of the last string IO intercepts.
         ///
         [[nodiscard]] constexpr auto
-        spa() const noexcept -> bsl::safe_u64
+        spa(bsl::safe_idx const &idx) const noexcept -> bsl::safe_u64
         {
             bsl::expects(m_assigned_vsid.is_valid_and_checked());
-            return m_spa;
+            return *m_mut_spas.at_if(idx);
         }
 
         /// <!-- description -->
@@ -149,11 +153,15 @@ namespace microv
         ///     to prevent having to walk the page table a second time prior to
         ///     resuming a guest.
         ///
+        /// <!-- inputs/outputs -->
+        ///   @param spa the spa to set
+        ///   @param idx the idx to set the spa into
+        ///
         constexpr void
-        set_spa(bsl::safe_u64 const &spa) noexcept
+        set_spa(bsl::safe_u64 const &spa, bsl::safe_idx const &idx) noexcept
         {
             bsl::expects(m_assigned_vsid.is_valid_and_checked());
-            m_spa = spa;
+            *m_mut_spas.at_if(idx) = spa;
         }
     };
 }
