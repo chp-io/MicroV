@@ -1780,6 +1780,15 @@ namespace microv
         }
 
         auto const num_iomem{bsl::to_u64(run.num_iomem)};
+        if (bsl::unlikely(num_iomem > bsl::safe_u64::magic_2())) {
+                bsl::error()
+                    << "FIXME: num_iomem is too large "    // --
+                    << num_iomem                           // --
+                    << bsl::endl                           // --
+                    << bsl::here();                        // --
+            return bsl::errc_failure;
+        }
+
         if (num_iomem > bsl::safe_u64::magic_0()) {
             constexpr auto page_mask{0xFFFFFFFFFFFFF000_u64};
 
@@ -1797,6 +1806,7 @@ namespace microv
                 bsl::touch();
             }
 
+            auto mut_consumed_bytes{0_u64};
             {
                 auto const page{mut_pp_pool.map<page_t>(mut_sys, spa0 & page_mask)};
 
@@ -1812,10 +1822,26 @@ namespace microv
                 }
 
                 bsl::builtin_memcpy(mut_data.data(), run.iomem.data(), mut_data.size_bytes());
+                mut_consumed_bytes = size;
             }
 
-            {
-                // TODO: spa1
+            if (bsl::unlikely(!spa1.is_invalid())) {
+                bsl::expects(hypercall::mv_is_page_aligned(spa1));
+                auto const page{mut_pp_pool.map<page_t>(mut_sys, spa1)};
+
+                auto const idx{0_u64};
+                auto const size{(num_iomem - mut_consumed_bytes).checked()};
+                auto mut_data{page.span(idx, size)};
+                if (bsl::unlikely(mut_data.is_invalid())) {
+                    bsl::error()
+                        << "data is invalid"    // --
+                        << bsl::endl            // --
+                        << bsl::here();         // --
+                    return bsl::errc_failure;
+                }
+
+                bsl::builtin_memcpy(mut_data.data(),
+                    run.iomem.at_if(bsl::to_idx(mut_consumed_bytes)), mut_data.size_bytes());
             }
         }
         else {
