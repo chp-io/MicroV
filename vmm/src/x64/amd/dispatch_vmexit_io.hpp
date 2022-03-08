@@ -180,6 +180,9 @@ namespace microv
             for (auto mut_i{0_idx}; mut_i < mut_num_pages; ++mut_i) {
                 bsl::safe_u64 mut_spa{};
                 bsl::safe_u64 mut_gpa{};
+                if (mut_i != bsl::safe_idx::magic_0()) {
+                    mut_string_addr = ((mut_string_addr & page_mask) + (bsl::to_umx(mut_i) * HYPERVISOR_PAGE_SIZE).checked()).checked();
+                }
                 //
                 //FIXME: This doesn't consider 16-bit segment base values!!
                 //
@@ -285,31 +288,39 @@ namespace microv
                     bsl::touch();
                 }
 
-                bsl::builtin_memcpy(mut_exit_io->data.data(), data.data(), size);
+                bsl::builtin_memcpy(mut_exit_io->data.data(), data.data(), data.size_bytes());
             }
 
             if (bsl::unlikely(bytes_cur_page < mut_bytes)) {
-                bsl::debug() << "mut_num_pages " << mut_num_pages << bsl::endl;
-                bsl::error() << "page boundary" << bsl::endl;
-                return vmexit_failure_advance_ip_and_run;
-            // auto const page{mut_pp_pool.map<page_t>(mut_sys, mut_spa1 & page_mask)};
-            //     auto const data{page.span(idx, mut_bytes)};
-            //     if (bsl::unlikely(data.is_invalid())) {
-            //         bsl::error()
-            //             << "data is invalid"    // --
-            //             << bsl::endl            // --
-            //             << bsl::here();         // --
+                bsl::debug() << "Handling page boudary" << bsl::endl;
 
-            //         return vmexit_failure_advance_ip_and_run;
-            //     }
-            //     else {
-            //         bsl::touch();
-            //     }
+                auto const size{(mut_bytes - bytes_cur_page).checked()};
+                mut_spa = mut_vs_pool.io_spa(mut_sys, vsid, ++mut_i);
+                if (bsl::unlikely(mut_spa.is_invalid())) {
+                    bsl::error()
+                        << "SPA for second page is invalid"    // --
+                        << bsl::endl    // --
+                        << bsl::here();    // --
+                    return vmexit_failure_advance_ip_and_run;
+                }
+                else if (bsl::unlikely((mut_spa & ~page_mask).is_pos())) {
+                    bsl::error()
+                        << "SPA should be page aligned but is "    // --
+                        << bsl::hex(mut_spa)
+                        << bsl::endl    // --
+                        << bsl::here();    // --
+                    return vmexit_failure_advance_ip_and_run;
+                }
 
-            //     bsl::builtin_memcpy(mut_exit_io->data.data(), data.data(), data.size_bytes());
-            // }
-            // else {
-            //     bsl::touch();
+                auto const page{mut_pp_pool.map<page_t>(mut_sys, mut_spa)};
+                auto const data{page.span({}, size)};
+                bsl::expects((bytes_cur_page + data.size_bytes()).checked() == mut_bytes);
+                // bsl::debug() << "bytes_cur_page " << bytes_cur_page << " size_bytes " << data.size_bytes() << " mut_bytes " << mut_bytes << " size " << size << bsl::endl;
+                // return vmexit_failure_advance_ip_and_run;
+                bsl::builtin_memcpy(mut_exit_io->data.at_if(bsl::to_idx(bytes_cur_page)), data.data(), data.size_bytes());
+            }
+            else {
+                bsl::touch();
             }
         }
         else {

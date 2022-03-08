@@ -169,16 +169,34 @@ namespace hypercall
                 integration::verify(*pmut_exit_io->data.at_if(mut_i) == *expected_data.at_if(mut_i));
             }
 
-            // Verify page boudary works
-            constexpr auto expected_big_data_size{MV_RUN_MAX_IOMEM_SIZE};
+            // Prepare data for page boudary verification
+            constexpr auto expected_string_data_size{MV_RUN_MAX_IOMEM_SIZE};
+            bsl::array<bsl::uint8, expected_string_data_size.get()> expected_string_data{};
+            bsl::builtin_memcpy(expected_string_data.data(), expected_data.data(), expected_data.size_bytes());
+            auto mut_i{bsl::to_idx(expected_data.size_bytes())};
+            for (auto mut_j{0_idx}; mut_i < expected_string_data_size; ++mut_i, ++mut_j) {
+                *expected_string_data.at_if(mut_i) = bsl::to_u8_unsafe(mut_j.get()).get();
+            }
+
+            // Verify handling page boudary works
             mut_exit_reason = integration::run_until_non_interrupt_exit(vsid);
             integration::verify(mut_exit_reason == mv_exit_reason_t::mv_exit_reason_t_io);
             integration::verify(pmut_exit_io->addr == expected_addr);
-            integration::verify(pmut_exit_io->reps == expected_big_data_size);
+            integration::verify(pmut_exit_io->reps == expected_string_data_size);
             integration::verify(pmut_exit_io->type == expected_type);
             integration::verify(pmut_exit_io->size == expected_size_8);
-            for (auto mut_i{0_idx}; mut_i < expected_data.size(); ++mut_i) {
+
+            for (mut_i = {} ; mut_i < expected_string_data_size; ++mut_i) {
+                bsl::print() << " " << bsl::hex(*pmut_exit_io->data.at_if(mut_i));
+            }
+            bsl::print() << bsl::endl;
+
+            for (mut_i = {}; mut_i < expected_data_size; ++mut_i) {
                 integration::verify(*pmut_exit_io->data.at_if(mut_i) == *expected_data.at_if(mut_i));
+            }
+            for (; mut_i < expected_string_data_size; ++mut_i) {
+                bsl::debug() << " mut_i " << bsl::hex(mut_i) << " " << bsl::hex(*pmut_exit_io->data.at_if(mut_i)) << " == " << bsl::hex(*expected_string_data.at_if(mut_i)) << bsl::endl;
+                integration::verify(*pmut_exit_io->data.at_if(mut_i) == *expected_string_data.at_if(mut_i));
             }
 
             integration::verify(mut_hvc.mv_vs_op_destroy_vs(vsid));

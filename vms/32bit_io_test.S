@@ -156,7 +156,21 @@ string_io_reps:
     mov ecx, 0x18
     rep outsb
 
+/**/
+    xor ecx, ecx
+    lea esi, data
+    add esi, 0x18
+loop_page_prep:
+    mov [esi], cx
+    inc esi
+    inc ecx
+    cmp ecx, 0xE90
+    jne loop_page_prep
+/**/
+
 string_io_page_boudary:
+    mov dx, 0x10
+    lea esi, data
     mov ecx, 0xEA8
     rep outsb
 

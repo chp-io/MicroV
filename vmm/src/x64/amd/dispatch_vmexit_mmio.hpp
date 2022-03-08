@@ -220,6 +220,7 @@ namespace microv
         // bsl::uint64 opcodes0{};
         // bsl::uint64 opcodes1{};
         auto rip{mut_sys.bf_vs_op_read(vsid, syscall::bf_reg_t::bf_reg_t_rip)};
+        bsl::error() << " rip " << bsl::hex(rip) << bsl::endl;
 
 
 /**************************/
