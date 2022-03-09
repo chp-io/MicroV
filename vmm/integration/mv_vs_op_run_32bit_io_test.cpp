@@ -83,7 +83,9 @@ namespace hypercall
             constexpr auto expected_type{0x01_u64};
             constexpr auto expected_size{mv_bit_size_t::mv_bit_size_t_16};
 
-            auto *const pmut_exit_io{to_0<mv_exit_io_t>()};
+            auto *const pmut_run_return{to_0<mv_run_return_t>()};
+            auto *const pmut_exit_io{&pmut_run_return->mv_exit_io};
+
             integration::verify(pmut_exit_io->addr == expected_addr);
             integration::verify(io_to<bsl::uint8>(pmut_exit_io->data) == expected_data);
             integration::verify(pmut_exit_io->reps == expected_reps);
@@ -134,7 +136,9 @@ namespace hypercall
             mut_exit_reason = integration::run_until_non_interrupt_exit(vsid);
             integration::verify(mut_exit_reason == mv_exit_reason_t::mv_exit_reason_t_io);
 
-            auto *const pmut_exit_io{to_0<mv_exit_io_t>()};
+            auto *const pmut_run_return{to_0<mv_run_return_t>()};
+            auto *const pmut_exit_io{&pmut_run_return->mv_exit_io};
+
             integration::verify(mut_exit_reason == mv_exit_reason_t::mv_exit_reason_t_io);
             integration::verify(pmut_exit_io->addr == expected_addr);
             integration::verify(io_to<bsl::uint8>(pmut_exit_io->data) == expected_data_8);

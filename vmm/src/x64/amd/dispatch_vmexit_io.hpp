@@ -221,8 +221,9 @@ namespace microv
             bsl::touch();
         }
 
-        auto mut_exit_io{mut_pp_pool.shared_page<hypercall::mv_exit_io_t>(mut_sys)};
-        bsl::expects(mut_exit_io.is_valid());
+        auto mut_run_return{mut_pp_pool.shared_page<hypercall::mv_run_return_t>(mut_sys)};
+        bsl::expects(mut_run_return.is_valid());
+        auto mut_exit_io{&mut_run_return->mv_exit_io};
 
         auto const bytes_cur_page{(HYPERVISOR_PAGE_SIZE - idx).checked()};
 
@@ -386,8 +387,9 @@ namespace microv
         // Context: Root VM
         // ---------------------------------------------------------------------
 
-        auto mut_exit_io{mut_pp_pool.shared_page<hypercall::mv_exit_io_t>(mut_sys)};
-        bsl::expects(mut_exit_io.is_valid());
+        auto mut_run_return{mut_pp_pool.shared_page<hypercall::mv_run_return_t>(mut_sys)};
+        bsl::expects(mut_run_return.is_valid());
+        auto mut_exit_io{&mut_run_return->mv_exit_io};
 
         mut_exit_io->addr = addr.get();
         mut_exit_io->size = mut_size;
