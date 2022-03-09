@@ -113,10 +113,12 @@ namespace microv
         if (((exitinfo1 & TYPE_MASK) >> TYPE_SHFT).is_zero()) {
             // OUT instruction
             mut_string_addr = mut_sys.bf_tls_rsi();
+            bsl::debug() << "String IO OUT" << bsl::endl;
         }
         else {
             // IN instruction
             mut_string_addr = mut_sys.bf_tls_rdi();
+            bsl::debug() << "String IO IN" << bsl::endl;
         }
 
         auto const end_addr{(mut_string_addr + mut_bytes).checked()};
@@ -161,7 +163,7 @@ namespace microv
             }
             mut_gpa = translation.paddr;
             mut_spa = mut_vm_pool.gpa_to_spa(mut_tls, mut_sys, mut_page_pool, mut_gpa, mut_sys.bf_tls_vmid());
-            // bsl::debug() << "mut_string_addr = " << bsl::hex(mut_string_addr) << " gpa = " << bsl::hex(mut_gpa) << " spa = " << bsl::hex(mut_spa) << bsl::endl;
+            bsl::debug() << "mut_string_addr = " << bsl::hex(mut_string_addr) << " gpa = " << bsl::hex(mut_gpa) << " spa = " << bsl::hex(mut_spa) << bsl::endl;
             mut_vs_pool.io_set_spa(mut_sys, vsid, mut_spa, mut_i);
         }
 

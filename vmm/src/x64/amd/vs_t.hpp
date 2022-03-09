@@ -614,6 +614,7 @@ namespace microv
             }
 
             this->m_emulated_cpuid.allocate(gs, tls, mut_sys, intrinsic, vsid);
+            this->m_emulated_io.allocate(gs, tls, mut_sys, intrinsic, vsid);
 
             m_assigned_vmid = ~vmid;
             m_assigned_vpid = ~vpid;

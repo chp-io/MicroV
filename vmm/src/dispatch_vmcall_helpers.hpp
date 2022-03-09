@@ -1780,19 +1780,47 @@ namespace microv
         }
 
         auto const num_iomem{bsl::to_u64(run.num_iomem)};
-        if (bsl::unlikely(num_iomem > bsl::safe_u64::magic_2())) {
+        if (bsl::unlikely(num_iomem > hypercall::MV_RUN_MAX_IOMEM_SIZE.get())) {
                 bsl::error()
-                    << "FIXME: num_iomem is too large "    // --
-                    << num_iomem                           // --
-                    << bsl::endl                           // --
-                    << bsl::here();                        // --
+                    << "num_iomem is too large "     // --
+                    << num_iomem                     // --
+                    << " > MV_RUN_MAX_IOMEM_SIZE"    // --
+                    << bsl::endl                     // --
+                    << bsl::here();                  // --
             return bsl::errc_failure;
         }
 
         if (num_iomem > bsl::safe_u64::magic_0()) {
+            using page_t = bsl::array<uint8_t, HYPERVISOR_PAGE_SIZE.get()>;
             constexpr auto page_mask{0xFFFFFFFFFFFFF000_u64};
 
-            using page_t = bsl::array<uint8_t, HYPERVISOR_PAGE_SIZE.get()>;
+            constexpr auto exit_reason_io{0x7B_u64};
+            auto const exitcode{mut_sys.bf_vs_op_read(vsid, syscall::bf_reg_t::bf_reg_t_exitcode)};
+            if (bsl::unlikely(exitcode != exit_reason_io)) {
+                bsl::error()
+                    << "num_iomem was set but exit reason is not an IO"    // --
+                    << bsl::here();                                        // --
+                return bsl::errc_failure;
+            }
+
+            auto const exitinfo1{mut_sys.bf_vs_op_read(vsid, syscall::bf_reg_t::bf_reg_t_exitinfo1)};
+            constexpr auto strn_mask{0x00000004_u64};
+            constexpr auto strn_shft{2_u64};
+            if (bsl::unlikely(((exitinfo1 & strn_mask) >> strn_shft).is_zero())) {
+                bsl::error()
+                    << "num_iomem was set but exit reason is not a string IO"    // --
+                    << bsl::here();                                              // --
+                return bsl::errc_failure;
+            }
+
+            constexpr auto type_mask{0x00000001_u64};
+            constexpr auto type_shft{0_u64};
+            if (bsl::unlikely(((exitinfo1 & type_mask) >> type_shft).is_zero())) {
+                bsl::error()
+                    << "num_iomem was set but exit reason is not a string IO IN"    // --
+                    << bsl::here();                                                 // --
+                return bsl::errc_failure;
+            }
 
             bsl::safe_idx mut_i{};
             auto const spa0{mut_vs_pool.io_spa(mut_sys, vsid, mut_i)};
@@ -1808,6 +1836,7 @@ namespace microv
 
             auto mut_consumed_bytes{0_u64};
             {
+                bsl::debug() << "string IO spa0 " << spa0 << bsl::endl;
                 auto const page{mut_pp_pool.map<page_t>(mut_sys, spa0 & page_mask)};
 
                 auto const idx{spa0 & ~page_mask};
@@ -1825,7 +1854,19 @@ namespace microv
                 mut_consumed_bytes = size;
             }
 
-            if (bsl::unlikely(!spa1.is_invalid())) {
+            if (bsl::unlikely(spa1.is_valid())) {
+                if (bsl::unlikely(spa1.is_zero())) {
+                    bsl::error()
+                        << "spa1 is 0"    // --
+                        << bsl::endl      // --
+                        << bsl::here();   // --
+                    return bsl::errc_failure;
+                }
+                else {
+                    bsl::touch();
+                }
+
+                bsl::debug() << "string IO spa1 " << spa1 << bsl::endl;
                 bsl::expects(hypercall::mv_is_page_aligned(spa1));
                 auto const page{mut_pp_pool.map<page_t>(mut_sys, spa1)};
 
@@ -1842,6 +1883,9 @@ namespace microv
 
                 bsl::builtin_memcpy(mut_data.data(),
                     run.iomem.at_if(bsl::to_idx(mut_consumed_bytes)), mut_data.size_bytes());
+            }
+            else {
+                bsl::touch();
             }
         }
         else {

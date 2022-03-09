@@ -53,8 +53,7 @@ namespace microv
         /// @brief stores the maximum number of storable SPAs
         static constexpr auto max_spa{2_u64};
         /// @brief stores the SPAs of a string IO read intercept
-        bsl::array<bsl::safe_u64, max_spa.get()> m_mut_spas{
-            bsl::safe_u64::failure(), bsl::safe_u64::failure()};
+        bsl::array<bsl::safe_u64, max_spa.get()> m_mut_spas{};
 
     public:
         /// <!-- description -->
@@ -115,6 +114,66 @@ namespace microv
             bsl::discard(intrinsic);
 
             m_assigned_vsid = {};
+        }
+
+        /// <!-- description -->
+        ///   @brief Allocates the emulated_cpuid_t
+        ///
+        /// <!-- inputs/outputs -->
+        ///   @param gs the gs_t to use
+        ///   @param tls the tls_t to use
+        ///   @param sys the bf_syscall_t to use
+        ///   @param intrinsic the intrinsic_t to use
+        ///   @param vsid the ID of the VS associated with this emulated_cpuid_t
+        ///
+        ///
+        constexpr void
+        allocate(
+            gs_t const &gs,
+            tls_t const &tls,
+            syscall::bf_syscall_t const &sys,
+            intrinsic_t const &intrinsic,
+            bsl::safe_u16 const &vsid) noexcept
+        {
+            bsl::discard(gs);
+            bsl::discard(tls);
+            bsl::discard(sys);
+            bsl::discard(intrinsic);
+
+            bsl::expects(vsid != syscall::BF_INVALID_ID);
+            bsl::expects(vsid == this->assigned_vsid());
+
+            for (auto &mut_spa: this->m_mut_spas) {
+                mut_spa = bsl::safe_u64::failure();
+            }
+        }
+
+        /// <!-- description -->
+        ///   @brief Deallocates the emulated_cpuid_t
+        ///
+        /// <!-- inputs/outputs -->
+        ///   @param gs the gs_t to use
+        ///   @param tls the tls_t to use
+        ///   @param sys the bf_syscall_t to use
+        ///   @param intrinsic the intrinsic_t to use
+        ///   @param vsid the ID of the VS associated with this emulated_cpuid_t
+        ///
+        ///
+        constexpr void
+        deallocate(
+            gs_t const &gs,
+            tls_t const &tls,
+            syscall::bf_syscall_t const &sys,
+            intrinsic_t const &intrinsic,
+            bsl::safe_u16 const &vsid) const noexcept
+        {
+            bsl::discard(gs);
+            bsl::discard(tls);
+            bsl::discard(sys);
+            bsl::discard(intrinsic);
+
+            bsl::expects(vsid != syscall::BF_INVALID_ID);
+            bsl::expects(vsid == this->assigned_vsid());
         }
 
         /// <!-- description -->
