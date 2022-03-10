@@ -204,6 +204,7 @@ namespace microv
         spa(bsl::safe_idx const &idx) const noexcept -> bsl::safe_u64
         {
             bsl::expects(m_assigned_vsid.is_valid_and_checked());
+            bsl::expects(idx < max_spa);
             return *m_mut_spas.at_if(idx);
         }
 
@@ -220,6 +221,7 @@ namespace microv
         set_spa(bsl::safe_u64 const &spa, bsl::safe_idx const &idx) noexcept
         {
             bsl::expects(m_assigned_vsid.is_valid_and_checked());
+            bsl::expects(idx < max_spa);
             *m_mut_spas.at_if(idx) = spa;
         }
     };

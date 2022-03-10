@@ -1892,8 +1892,8 @@ namespace microv
             bsl::touch();
         }
         bsl::safe_idx mut_i{};
-        mut_vs_pool.io_set_spa(mut_sys, vsid, {}, mut_i);
-        mut_vs_pool.io_set_spa(mut_sys, vsid, {}, ++mut_i);
+        mut_vs_pool.io_set_spa(mut_sys, vsid, bsl::safe_u64::failure(), mut_i);
+        mut_vs_pool.io_set_spa(mut_sys, vsid, bsl::safe_u64::failure(), ++mut_i);
 
         return bsl::errc_success;
     }
