@@ -1836,7 +1836,6 @@ namespace microv
 
             auto mut_consumed_bytes{0_u64};
             {
-                bsl::debug() << "string IO spa0 " << spa0 << bsl::endl;
                 auto const page{mut_pp_pool.map<page_t>(mut_sys, spa0 & page_mask)};
 
                 auto const idx{spa0 & ~page_mask};
@@ -1866,7 +1865,6 @@ namespace microv
                     bsl::touch();
                 }
 
-                bsl::debug() << "string IO spa1 " << spa1 << bsl::endl;
                 bsl::expects(hypercall::mv_is_page_aligned(spa1));
                 auto const page{mut_pp_pool.map<page_t>(mut_sys, spa1)};
 

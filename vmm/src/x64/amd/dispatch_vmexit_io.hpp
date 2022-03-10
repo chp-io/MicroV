@@ -113,12 +113,10 @@ namespace microv
         if (((exitinfo1 & TYPE_MASK) >> TYPE_SHFT).is_zero()) {
             // OUT instruction
             mut_string_addr = mut_sys.bf_tls_rsi();
-            bsl::debug() << "String IO OUT" << bsl::endl;
         }
         else {
             // IN instruction
             mut_string_addr = mut_sys.bf_tls_rdi();
-            bsl::debug() << "String IO IN" << bsl::endl;
         }
 
         auto const end_addr{(mut_string_addr + mut_bytes).checked()};
@@ -134,13 +132,6 @@ namespace microv
             switch_to_root(mut_tls, mut_sys, intrinsic, mut_vm_pool, mut_vp_pool, mut_vs_pool, true);
             return vmexit_failure_advance_ip_and_run;
         }
-
-        bsl::debug()
-            << "Got string operation, mut_string_addr = "    // --
-            << bsl::hex(mut_string_addr)                     // --
-            << " num_pages "                                 // --
-            << num_pages                                     // --
-            << bsl::endl;                                    // --
 
         for (auto mut_i{0_idx}; mut_i < num_pages; ++mut_i) {
             bsl::safe_u64 mut_spa{};
@@ -163,7 +154,6 @@ namespace microv
             }
             mut_gpa = translation.paddr;
             mut_spa = mut_vm_pool.gpa_to_spa(mut_tls, mut_sys, mut_page_pool, mut_gpa, mut_sys.bf_tls_vmid());
-            bsl::debug() << "mut_string_addr = " << bsl::hex(mut_string_addr) << " gpa = " << bsl::hex(mut_gpa) << " spa = " << bsl::hex(mut_spa) << bsl::endl;
             mut_vs_pool.io_set_spa(mut_sys, vsid, mut_spa, mut_i);
         }
 
@@ -230,7 +220,6 @@ namespace microv
         {
             auto const size{bytes_cur_page.min(mut_bytes)};
             auto const page{mut_pp_pool.map<page_t>(mut_sys, mut_spa & PAGE_MASK)};
-            bsl::debug() << " idx " << bsl::hex(idx) << " size " << bsl::hex(size) << bsl::endl;
             auto const data{page.span(idx, size)};
             if (bsl::unlikely(data.is_invalid())) {
                 bsl::error()
