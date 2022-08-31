@@ -217,6 +217,8 @@ DWORD WINAPI vm_worker(LPVOID param)
  */
 static void set_boot_entry() noexcept
 {
+    log_msg("%s: calling\n", __func__);
+
     int res = system(
         "C:\\windows\\system32\\bcdedit.exe /set {bootmgr} path \\EFI\\Boot\\PreLoader.efi");
     if (res != 0) {
@@ -224,18 +226,23 @@ static void set_boot_entry() noexcept
             "bcdedit: failed to set MicroV boot manager entry: exit code %d",
             res);
     }
+    log_msg("%s: bcdedit 1\n", __func__);
     res = system(
         "C:\\windows\\system32\\bcdedit.exe /set {fwbootmgr} displayorder {bootmgr}");
     if (res != 0) {
         log_msg("bcdedit: failed to set fwbootmgr displayorder: exit code %d",
                 res);
     }
+    log_msg("%s: bcdedit 2\n", __func__);
     res = system(
         "C:\\windows\\system32\\bcdedit.exe /set {fwbootmgr} bootsequence {bootmgr}");
     if (res != 0) {
         log_msg("bcdedit: failed to set fwbootmgr bootsequence: exit code %d",
                 res);
     }
+    log_msg("%s: bcdedit 3\n", __func__);
+
+    log_msg("%s: called\n", __func__);
 }
 
 void WINAPI service_main(DWORD argc, LPTSTR *argv)
@@ -313,12 +320,15 @@ void WINAPI service_main(DWORD argc, LPTSTR *argv)
         wait_on_vm_thread();
     } else {
         DWORD ret = WaitForSingleObject(vm_thread, INFINITE);
+        log_msg("%s: Returned from WaitForSingleObject\n", __func__);
         if (ret != WAIT_OBJECT_0) {
             log_msg("%s: wait on vm_thread failed (err=0x%x)\n", __func__, ret);
         }
     }
 
     set_boot_entry();
+    // DEBUG: Checking that we reach here
+    log_msg("%s: set_boot_entry called after vm_thread\n", __func__);
 
     set_status(SERVICE_ACCEPT_NONE, SERVICE_STOPPED, NO_ERROR);
 

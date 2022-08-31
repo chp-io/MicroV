@@ -359,25 +359,33 @@ int protected_main(const args_type &args)
 
 #ifdef _WIN64
         // TODO: consolidate the various ioctls
+        log_msg("%s: line %d\n", __func__, __LINE__);
         HANDLE xenbus_fd = uvctl_ioctl_open(&GUID_DEVINTERFACE_XENBUS);
+        log_msg("%s: line %d\n", __func__, __LINE__);
         if (xenbus_fd == INVALID_HANDLE_VALUE) {
             log_msg("%s: failed to open xenbus handle (err=0x%x)\n",
                     __func__,
                     GetLastError());
         } else {
+            log_msg("%s: line %d\n", __func__, __LINE__);
             XENBUS_SET_BACKEND_STATE_IN state{};
+            log_msg("%s: line %d\n", __func__, __LINE__);
             state.BackendState = XENBUS_BACKEND_STATE_DYING;
+            log_msg("%s: line %d\n", __func__, __LINE__);
 
             auto rc = uvctl_rw_ioctl(xenbus_fd,
                                      IOCTL_XENBUS_SET_BACKEND_STATE,
                                      &state,
                                      sizeof(state));
+            log_msg("%s: line %d\n", __func__, __LINE__);
             if (rc < 0) {
                 log_msg("%s: failed to set backend state for xenbus\n",
                         __func__);
             }
 
+            log_msg("%s: line %d\n", __func__, __LINE__);
             CloseHandle(xenbus_fd);
+            log_msg("%s: line %d\n", __func__, __LINE__);
         }
 #endif
     }

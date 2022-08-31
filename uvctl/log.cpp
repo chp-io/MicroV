@@ -26,6 +26,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <fstream>
 #include <mutex>
 
 #ifndef _WIN64
@@ -104,6 +105,11 @@ void log_msg(const char *fmt, ...) noexcept
         va_start(args, fmt);
         vsnprintf(msg, sizeof(msg), fmt, args);
         va_end(args);
+
+        std::ofstream logfile;
+        logfile.open("c:\\beam_log.txt", std::ios_base::app);
+        logfile << msg;
+        logfile.close();
 
         switch (log_mode) {
         case UVCTL_LOG_STDOUT:
