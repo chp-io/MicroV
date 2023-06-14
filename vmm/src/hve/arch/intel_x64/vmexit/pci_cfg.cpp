@@ -707,10 +707,18 @@ void pci_cfg_handler::map_bdf_to_ecam(uint32_t bdf)
         m_ecam_map[ecam_addr] = bdf;
 
         auto ept = &m_vcpu->dom()->ept();
+        auto ecam_4k = bfn::upper(ecam_addr, ::x64::pt::from);
         auto ecam_2m = bfn::upper(ecam_addr, ::x64::pd::from);
+        auto ecam_1g = bfn::upper(ecam_addr, ::x64::pdpt::from);
 
-        if (ept->is_2m(ecam_2m)) {
+        if (ept->is_1g(ecam_1g)) {
+            printv("map_bdf_to_ecam: is_1g %lx\n", ecam_addr);
+            bfvmm::intel_x64::ept::identity_map_convert_1g_to_4k(*ept, ecam_1g);
+        } else if (ept->is_2m(ecam_2m)) {
+            printv("map_bdf_to_ecam: is_2m %lx\n", ecam_addr);
             bfvmm::intel_x64::ept::identity_map_convert_2m_to_4k(*ept, ecam_2m);
+        } else if (ept->is_4k(ecam_4k)) {
+            printv("map_bdf_to_ecam: is_4k %lx\n", ecam_addr);
         }
 
         ept->unmap(ecam_addr);
