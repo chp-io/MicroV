@@ -893,11 +893,13 @@ set(HIPPOMOCKS_URL_MD5 "6a0928dfee03fbf4c12c36219c696bae"
     "Hippomocks URL MD5 hash"
 )
 
-set(GNUEFI_URL "https://github.com/Bareflank/gnu-efi/archive/refs/tags/v2.0.zip"
+# set(GNUEFI_URL "https://github.com/Bareflank/gnu-efi/archive/refs/tags/v2.0.zip"
+set(GNUEFI_URL "https://pilotfiber.dl.sourceforge.net/project/gnu-efi/gnu-efi-3.0.15.tar.bz2"
     CACHE INTERNAL FORCE
     "gnu-efi URL")
 
-set(GNUEFI_URL_MD5 "3cd10dc9c14f4a3891f8537fd78ed04f"
+# set(GNUEFI_URL_MD5 "3cd10dc9c14f4a3891f8537fd78ed04f"
+set(GNUEFI_URL_MD5 "192d94e995ddd4ebdce4903adfd06039"
     CACHE INTERNAL FORCE
     "gnu-efi URL MD5 hash")
 

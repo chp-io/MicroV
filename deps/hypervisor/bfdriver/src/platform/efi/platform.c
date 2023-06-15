@@ -87,7 +87,7 @@ platform_alloc_rwe(uint64_t len)
     EFI_PHYSICAL_ADDRESS addr = 0;
 
     if (len == 0) {
-        BFALERT("platform_alloc_rw: invalid length\n");
+        BFALERT("platform_alloc_rwe: invalid length\n");
         return (void *)addr;
     }
 
@@ -96,7 +96,7 @@ platform_alloc_rwe(uint64_t len)
     );
 
     if (EFI_ERROR(status)) {
-        BFALERT("platform_alloc_rw: AllocatePages failed: %lld\n", len);
+        BFALERT("platform_alloc_rwe: AllocatePages failed: %lld\n", len);
     }
 
     return (void *)addr;

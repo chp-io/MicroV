@@ -22,6 +22,7 @@
 
 #include <efi.h>
 #include <efilib.h>
+#include <efiapi.h>
 
 #include <vmm.h>
 #include <common.h>
@@ -65,6 +66,12 @@ extern uint64_t no_pci_pt_count;
 #ifndef EFI_BOOT_NEXT
 #define EFI_BOOT_NEXT L"\\EFI\\boot\\bootx64.efi"
 #endif
+
+EFI_EVENT mExitBootServicesEvent = NULL;
+int g_delayed_start = 1;
+// ExitBootServices GUID (gEfiEventExitBootServicesGuid)
+static const EFI_GUID g_ebs_guid
+    = { 0x27ABF055, 0xB1B8, 0x4C26, { 0x80, 0x48, 0x74, 0x8F, 0x37, 0xBA, 0xA2, 0xDF }};
 
 void unmap_vmm_from_root_domain(void);
 
@@ -328,6 +335,45 @@ void parse_cmdline(EFI_HANDLE image)
     }
 }
 
+void start_vmm_and_unmap()
+{
+    Print(L"-- ioctl_start_vmm\n");
+    ioctl_start_vmm();
+    Print(L"-- unmap_vmm_from_root_domain\n");
+    unmap_vmm_from_root_domain();
+}
+
+void EFIAPI notify_exit_boot_services(EFI_EVENT event, void *context)
+{
+    (void) event;
+    (void) context;
+
+    Print(L"-- start_vmm_and_unmap\n");
+    start_vmm_and_unmap();
+}
+
+void delayed_start()
+{
+    EFI_STATUS status;
+
+    Print(L"-- create exit boot services event\n");
+    //
+    // Create event to stop the HC when exit boot service.
+    //
+    status = gBS->CreateEventEx(
+                    EVT_NOTIFY_SIGNAL,
+                    TPL_NOTIFY,
+                    notify_exit_boot_services,
+                    NULL,
+                    &g_ebs_guid,
+                    &mExitBootServicesEvent
+                    );
+
+    if (EFI_ERROR(status)) {
+        Print(L"Failed to create ExitBootServices event\n");
+    }
+}
+
 /* -------------------------------------------------------------------------- */
 /* Entry / Exit                                                               */
 /* -------------------------------------------------------------------------- */
@@ -356,12 +402,22 @@ efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
     }
 #endif
 
+    Print(L"-- ioctl_add_module\n");
     ioctl_add_module((char *)vmm, vmm_len);
+    Print(L"-- ioctl_load_vmm\n");
     ioctl_load_vmm();
-    ioctl_start_vmm();
-
-    unmap_vmm_from_root_domain();
+    if (g_delayed_start) {
+        Print(L"-- delayed_start\n");
+        delayed_start();
+    } else {
+        Print(L"-- start_vmm_and_unmap\n");
+        start_vmm_and_unmap();
+    }
     load_start_vm(image);
+
+    // an error occured
+    Print(L"-- ERROR: Shouldn't have reached here\n");
+    gBS->CloseEvent(mExitBootServicesEvent);
 
     return EFI_SUCCESS;
 }
