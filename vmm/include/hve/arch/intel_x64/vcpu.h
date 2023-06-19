@@ -374,6 +374,9 @@ public:
     bool handle_guest_init_signal(::bfvmm::intel_x64::vcpu *vcpu);
     bool handle_root_init_signal(::bfvmm::intel_x64::vcpu *vcpu);
 
+    /// Debug Guest Triple Fault
+    bool debug_triple_fault(::bfvmm::intel_x64::vcpu *vcpu);
+
     /// Signal begin/end of shootdown to the other cpus on the system
     int64_t begin_shootdown(uint32_t ipi_code);
     void end_shootdown();

@@ -295,6 +295,21 @@ bool vcpu::handle_wrcr8(vcpu_t *vcpu)
     return true;
 }
 
+bool vcpu::debug_triple_fault(::bfvmm::intel_x64::vcpu *vcpu)
+{
+    const auto rip = vcpu->rip();
+    auto len = vmcs_n::vm_exit_instruction_length::get();
+    auto map = vcpu->map_gva_4k<uint8_t>(rip, len);
+    auto mode = vcpu_cast(vcpu)->insn_mode();
+    auto insn = disasm()->disasm_single(map.get(), rip, len, mode);
+
+    printv("%s: %s %s\n", __func__, insn->mnemonic, insn->op_str);
+
+    vcpu->halt("debugging triple fault");
+
+    return true;
+}
+
 vcpu::vcpu(vcpuid::type id, gsl::not_null<domain *> domain) :
     bfvmm::intel_x64::vcpu{id, domain->global_state()},
     m_domain{domain},
@@ -338,6 +353,9 @@ vcpu::vcpu(vcpuid::type id, gsl::not_null<domain *> domain) :
 
         this->add_handler(vmcs_n::exit_reason::basic_exit_reason::init_signal,
                           {&vcpu::handle_root_init_signal, this});
+
+        this->add_handler(vmcs_n::exit_reason::basic_exit_reason::triple_fault,
+                          {&vcpu::debug_triple_fault, this});
     } else {
         this->write_domU_guest_state(domain);
 
