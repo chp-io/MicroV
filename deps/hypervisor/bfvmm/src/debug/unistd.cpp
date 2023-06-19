@@ -54,7 +54,8 @@ write_str(const std::string &str)
         if (g_enable_xue) {
             xue_write(&g_xue, (const char *)str.data(), str.size());
         }
-#elif ENABLE_SERIAL
+#endif
+#if ENABLE_SERIAL
         for (const auto c : str) {
             bfvmm::DEFAULT_COM_DRIVER::instance()->write(c);
         }
@@ -73,7 +74,8 @@ unsafe_write_cstr(const char *cstr, size_t len)
     try {
 #ifdef USE_XUE
         xue_write(&g_xue, cstr, len);
-#elif ENABLE_SERIAL
+#endif
+#if ENABLE_SERIAL
         auto str = gsl::make_span(cstr, gsl::narrow_cast<std::ptrdiff_t>(len));
         for (const auto &c : str) {
             bfvmm::DEFAULT_COM_DRIVER::instance()->write(c);
