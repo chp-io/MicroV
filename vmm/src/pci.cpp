@@ -521,8 +521,9 @@ void pci_dev::add_root_handlers(vcpu *vcpu)
 
         unmap_mmio_bar(&vcpu->dom()->ept(), &bar);
 
-        printv("pci: %s: MMIO BAR[%u] at 0x%lx-0x%lx (%s, %s)\n",
+        printv("pci pt: %s (%s): MMIO BAR[%u] at 0x%lx-0x%lx (%s, %s)\n",
                this->bdf_str(),
+               this->is_netdev_eth() ? "Eth" : "WiFi",
                reg - 4,
                bar.addr,
                bar.last(),
