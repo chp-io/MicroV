@@ -101,8 +101,10 @@ jobs:
         echo 'set(XEN_READCONSOLE_ROOTVM ON)' >> ../config.cmake
         echo 'set(USE_XUE ON)' >> ../config.cmake
         echo 'set(ENABLE_SERIAL ON)' >> ../config.cmake
+        echo 'set(DEFAULT_COM_PORT 0x3F8U)' >> ../config.cmake
+        echo 'set(DEBUG_LEVEL 9)' >> ../config.cmake
         cmake ../microv/deps/hypervisor -DCONFIG=../config.cmake -DCMAKE_CXX_FLAGS="--verbose "
-        make
+        make -j
       shell: bash
 
     - uses: actions/upload-artifact@v2
