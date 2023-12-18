@@ -8,8 +8,7 @@ on:
       - '**.md'
   workflow_dispatch:
   schedule:
-    - cron: "45 1 * * *"
-
+    - cron: '0 3 * * 5'  # Every Friday at 3am
 
 jobs:
 
