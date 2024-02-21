@@ -68,7 +68,13 @@ extern uint64_t no_pci_pt_count;
 #endif
 
 EFI_EVENT mExitBootServicesEvent = NULL;
+
+#ifdef EFI_DELAYED_START
 int g_delayed_start = 1;
+#else
+int g_delayed_start = 0;
+#endif
+
 // ExitBootServices GUID (gEfiEventExitBootServicesGuid)
 static const EFI_GUID g_ebs_guid
     = { 0x27ABF055, 0xB1B8, 0x4C26, { 0x80, 0x48, 0x74, 0x8F, 0x37, 0xBA, 0xA2, 0xDF }};
