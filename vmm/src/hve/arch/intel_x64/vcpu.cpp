@@ -303,7 +303,14 @@ bool vcpu::debug_triple_fault(::bfvmm::intel_x64::vcpu *vcpu)
     auto mode = vcpu_cast(vcpu)->insn_mode();
     auto insn = disasm()->disasm_single(map.get(), rip, len, mode);
 
-    printv("%s: %s %s\n", __func__, insn->mnemonic, insn->op_str);
+    printv("%s: ", __func__);
+    printf("%2" PRIx64 "  ", insn->address);
+    for (int i = 0; i < insn->size; i++) {
+        if (i > 0)
+            putchar(' ');
+        printf("%02x", insn->bytes[i]);
+    }
+    printf(" %s %s\n", insn->mnemonic, insn->op_str);
 
     vcpu->halt("debugging triple fault");
 
