@@ -304,13 +304,23 @@ bool vcpu::debug_triple_fault(::bfvmm::intel_x64::vcpu *vcpu)
     auto insn = disasm()->disasm_single(map.get(), rip, len, mode);
 
     printv("%s: ", __func__);
-    printf("%2" PRIx64 "  ", insn->address);
+    printf("[0x%2x] ", insn->address);
     for (int i = 0; i < insn->size; i++) {
         if (i > 0)
             putchar(' ');
         printf("%02x", insn->bytes[i]);
     }
     printf(" %s %s\n", insn->mnemonic, insn->op_str);
+
+    printv("%s: dumping page:\n", __func__);
+    const auto start_addr = rip & 0xFFFFFFFFFFFFF000ULL;
+    const auto page_size = 0x1000ULL;
+    const auto map_page = vcpu->map_gva_4k<uint8_t>(start_addr, page_size);
+    const auto buf = map_page.get();
+    for (int i = 0; i < page_size; i++) {
+        printf(" %02x", buf[i]);
+    }
+    printf("\n");
 
     vcpu->halt("debugging triple fault");
 
