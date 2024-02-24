@@ -83,6 +83,7 @@ static_assert(header_size == 64);
 xstate::xstate(class vcpu *vcpu) : m_vcpu{vcpu}
 {
     if (vcpu->is_root_vcpu()) {
+        bfalert_info(0, "xstate initialization for root vcpu");
         expects(::intel_x64::vmcs::guest_cr4::osxsave::is_enabled());
         m_xcr0 = ::intel_x64::xcr0::get();
         m_rfbm = m_xcr0 & ~sse_mask;
@@ -90,6 +91,7 @@ xstate::xstate(class vcpu *vcpu) : m_vcpu{vcpu}
         m_area = std::make_unique<char[]>(m_size);
         memset(m_area.get(), 0, m_size);
     } else {
+        bfalert_info(0, "xstate initialization for guest vcpu");
         /* Bit 0 of xcr0 must always be 1 */
         m_xcr0 = x87_mask;
         m_rfbm = m_xcr0;

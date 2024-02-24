@@ -50,6 +50,61 @@ cpuid_handler::cpuid_handler(gsl::not_null<vcpu *> vcpu) : m_vcpu{vcpu}
     using namespace vmcs_n;
 
     if (vcpu->is_dom0()) {
+
+        // Debug win11 issue
+        if (vcpu->rax() == 1 && vcpu->rcx() == 0) {
+            bfalert_info(0, "cpuid_handler: debugging win11 issue");
+            if ((vcpu->rip() & 0xFFF) == 0x3f9) {
+                bfalert_info(0, "cpuid_handler: found possible candidate");
+            }
+            /*
+            000003f9 0f a2           CPUID
+            000003fb 89 04 24        MOV        dword ptr [RSP]=>local_18,EAX
+            000003fe 44 8b d1        MOV        R10D,ECX
+            00000401 b8 07 00        MOV        EAX,0x7
+                    00 00
+            00000406 89 5c 24 04     MOV        dword ptr [RSP + local_14],EBX
+            0000040a 89 4c 24 08     MOV        dword ptr [RSP + local_10],ECX
+            0000040e 89 54 24 0c     MOV        dword ptr [RSP + local_c],EDX
+            00000412 44 3b c0        CMP        R8D,EAX
+            00000415 7c 24           JL         LAB_0000043b
+            00000417 33 c9           XOR        ECX,ECX
+            00000419 45 0f b6 c9     MOVZX      R9D,R9B
+            0000041d 0f a2           CPUID
+            0000041f 89 04 24        MOV        dword ptr [RSP]=>local_18,EAX
+            00000422 0f ba e3 09     BT         EBX,0x9
+            00000426 b8 02 00        MOV        EAX,0x2
+                    00 00
+            0000042b 89 5c 24 04     MOV        dword ptr [RSP + local_14],EBX
+            0000042f 44 0f 42 c8     CMOVC      R9D,EAX
+            00000433 89 4c 24 08     MOV        dword ptr [RSP + local_10],ECX
+            00000437 89 54 24 0c     MOV        dword ptr [RSP + local_c],EDX
+                                LAB_0000043b                                    XREF[1]:     00000415(j)
+            0000043b 41 0f ba        BT         R10D,0x14
+                    e2 14
+            00000440 73 26           JNC        LAB_00000468
+            00000442 41 0f ba        BT         R10D,0x1b
+                    e2 1b
+            00000447 73 1f           JNC        LAB_00000468
+            00000449 41 0f ba        BT         R10D,0x1c
+                    e2 1c
+            0000044e 73 18           JNC        LAB_00000468
+            00000450 33 c9           XOR        ECX,ECX
+            00000452 0f 01 d0        XGETBV
+             */
+
+            const uint8_t xgetbv[] = {0x0f, 0x01, 0xd0};
+            const auto xgetbv_len = 3;
+            const auto offset = 0x59; /* 0x452 - 0x3f9 */
+            const auto addr = vcpu->rip() + offset;
+            const auto map = vcpu->map_gva_4k<uint8_t>(addr, xgetbv_len);
+
+            if (!memcmp(map.get(), &xgetbv, xgetbv_len)) {
+                vcpu->dump("cpuid_handler: found xgetbv\n");
+            }
+        }
+        // End debug win11 issue
+
         EMULATE_CPUID(0x00000007, root_0x00000007);
         EMULATE_CPUID(0x0000000D, root_0x0000000D);
         EMULATE_CPUID(0x00000014, root_0x00000014);
