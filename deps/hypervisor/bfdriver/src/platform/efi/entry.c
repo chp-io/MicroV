@@ -338,10 +338,7 @@ void parse_cmdline(EFI_HANDLE image)
 
 void start_vmm_and_unmap()
 {
-    Print(L"-- ioctl_start_vmm\n");
     ioctl_start_vmm();
-
-    Print(L"-- unmap_vmm_from_root_domain\n");
     unmap_vmm_from_root_domain();
 }
 
@@ -354,10 +351,6 @@ EFI_STATUS EFIAPI ExitBootServicesHook(IN EFI_HANDLE ImageHandle, IN UINTN MapKe
     UINTN LocalMapKey;
     UINTN DescriptorSize;
     UINT32 DescriptorVersion;
-
-    Print(L"-- exit boot services hook called\n");
-
-    // start_vmm_and_unmap();
 
 	/* Fix the pointer in the boot services table */
 	/* If you don't do this, sometimes your hook method will be called repeatedly, which you don't want */
@@ -375,13 +368,9 @@ EFI_STATUS EFIAPI ExitBootServicesHook(IN EFI_HANDLE ImageHandle, IN UINTN MapKe
         } else {
             /* status is likely success - let the while() statement check success */
         }
-        Print(L"This time through the memory map loop, status = %r\n", status);
-
     } while (status != EFI_SUCCESS);
 
     status = gOrigExitBootServices(ImageHandle,LocalMapKey);
-    Print(L"-- original exit boot services called\n");
-
     start_vmm_and_unmap();
 
     return status;
@@ -392,7 +381,6 @@ void EFIAPI notify_exit_boot_services(EFI_EVENT event, void *context)
     (void) event;
     (void) context;
 
-    Print(L"-- notify_exit_boot_services: start_vmm_and_unmap\n");
     start_vmm_and_unmap();
 }
 
@@ -401,7 +389,6 @@ void delayed_start()
 #if 0
     EFI_STATUS status;
 
-    Print(L"-- create exit boot services event\n");
     //
     // Create event to stop the HC when exit boot service.
     //
@@ -419,7 +406,6 @@ void delayed_start()
     }
 #else
     (void) g_ebs_guid;
-    Print(L"-- hook exit boot services\n");
     gOrigExitBootServices = gBS->ExitBootServices;
     gBS->ExitBootServices = ExitBootServicesHook;
 #endif
@@ -453,21 +439,17 @@ efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
     }
 #endif
 
-    Print(L"-- ioctl_add_module\n");
     ioctl_add_module((char *)vmm, vmm_len);
-    Print(L"-- ioctl_load_vmm\n");
     ioctl_load_vmm();
     if (g_delayed_start) {
-        Print(L"-- delayed_start\n");
         delayed_start();
     } else {
-        Print(L"-- start_vmm_and_unmap\n");
         start_vmm_and_unmap();
     }
     load_start_vm(image);
 
     // an error occured
-    Print(L"-- ERROR: Shouldn't have reached here\n");
+    Print(L"ERROR: Returned after loading and starting the VMM\n");
     gBS->CloseEvent(mExitBootServicesEvent);
 
     return EFI_SUCCESS;
