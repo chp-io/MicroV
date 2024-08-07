@@ -118,7 +118,8 @@ if(${PREFIX} STREQUAL efi)
     add_custom_command(
         TARGET bareflank
         POST_BUILD
-        COMMAND ${CMAKE_OBJCOPY}
+        # Fix for 22.04: Use binutil's instead of cmake's objcopy
+        COMMAND /usr/bin/objcopy
         ARGS -j .text -j .sdata -j .data -j .dynamic -j .dynsym
         ARGS -j .rel -j .rela -j .rel.* -j .rela.* -j .rel* -j .rela* -j .reloc
         ARGS --target efi-app-${BUILD_TARGET_ARCH} libbareflank.so ${CMAKE_BINARY_DIR}/bareflank.efi
