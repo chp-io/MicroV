@@ -22,7 +22,6 @@
 
 #include <efi.h>
 #include <efilib.h>
-#include <efiapi.h>
 
 #include <vmm.h>
 #include <common.h>
@@ -66,13 +65,6 @@ extern uint64_t no_pci_pt_count;
 #ifndef EFI_BOOT_NEXT
 #define EFI_BOOT_NEXT L"\\EFI\\boot\\bootx64.efi"
 #endif
-
-EFI_EVENT mExitBootServicesEvent = NULL;
-int g_delayed_start = 0;
-// ExitBootServices GUID (gEfiEventExitBootServicesGuid)
-static const EFI_GUID g_ebs_guid
-    = { 0x27ABF055, 0xB1B8, 0x4C26, { 0x80, 0x48, 0x74, 0x8F, 0x37, 0xBA, 0xA2, 0xDF }};
-EFI_EXIT_BOOT_SERVICES     gOrigExitBootServices;
 
 void unmap_vmm_from_root_domain(void);
 
@@ -336,81 +328,6 @@ void parse_cmdline(EFI_HANDLE image)
     }
 }
 
-void start_vmm_and_unmap()
-{
-    ioctl_start_vmm();
-    unmap_vmm_from_root_domain();
-}
-
-EFI_STATUS EFIAPI ExitBootServicesHook(IN EFI_HANDLE ImageHandle, IN UINTN MapKey)
-{
-    (void) MapKey;
-    EFI_STATUS status;
-    UINTN MemoryMapSize;
-    EFI_MEMORY_DESCRIPTOR *MemoryMap;
-    UINTN LocalMapKey;
-    UINTN DescriptorSize;
-    UINT32 DescriptorVersion;
-
-	/* Fix the pointer in the boot services table */
-	/* If you don't do this, sometimes your hook method will be called repeatedly, which you don't want */
-    gBS->ExitBootServices = gOrigExitBootServices;
-
-    /* Get the memory map */
-    MemoryMap = NULL;
-    MemoryMapSize = 0;
-	
-    do {
-        status = gBS->GetMemoryMap(&MemoryMapSize, MemoryMap, &LocalMapKey, &DescriptorSize,&DescriptorVersion);
-        if (status == EFI_BUFFER_TOO_SMALL){
-            MemoryMap = AllocatePool(MemoryMapSize + 1);
-            status = gBS->GetMemoryMap(&MemoryMapSize, MemoryMap, &LocalMapKey, &DescriptorSize,&DescriptorVersion);
-        } else {
-            /* status is likely success - let the while() statement check success */
-        }
-    } while (status != EFI_SUCCESS);
-
-    status = gOrigExitBootServices(ImageHandle,LocalMapKey);
-    start_vmm_and_unmap();
-
-    return status;
-}
-
-void EFIAPI notify_exit_boot_services(EFI_EVENT event, void *context)
-{
-    (void) event;
-    (void) context;
-
-    start_vmm_and_unmap();
-}
-
-void delayed_start()
-{
-#if 0
-    EFI_STATUS status;
-
-    //
-    // Create event to stop the HC when exit boot service.
-    //
-    status = gBS->CreateEventEx(
-                    EVT_NOTIFY_SIGNAL,
-                    TPL_NOTIFY,
-                    notify_exit_boot_services,
-                    NULL,
-                    &g_ebs_guid,
-                    &mExitBootServicesEvent
-                    );
-
-    if (EFI_ERROR(status)) {
-        Print(L"Failed to create ExitBootServices event\n");
-    }
-#else
-    (void) g_ebs_guid;
-    gOrigExitBootServices = gBS->ExitBootServices;
-    gBS->ExitBootServices = ExitBootServicesHook;
-#endif
-}
-
 /* -------------------------------------------------------------------------- */
 /* Entry / Exit                                                               */
 /* -------------------------------------------------------------------------- */
@@ -441,16 +358,12 @@ efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
 
     ioctl_add_module((char *)vmm, vmm_len);
     ioctl_load_vmm();
-    if (g_delayed_start) {
-        delayed_start();
-    } else {
-        start_vmm_and_unmap();
-    }
+    ioctl_start_vmm();
+    unmap_vmm_from_root_domain();
     load_start_vm(image);
 
     // an error occured
     Print(L"ERROR: Returned after loading and starting the VMM\n");
-    gBS->CloseEvent(mExitBootServicesEvent);
 
     return EFI_SUCCESS;
 }
