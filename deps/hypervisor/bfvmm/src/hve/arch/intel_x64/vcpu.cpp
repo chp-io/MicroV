@@ -102,6 +102,10 @@ setup()
 
     if (feature_information::ecx::xsave::is_enabled()) {
         g_cr4_reg |= ::intel_x64::cr4::osxsave::mask;
+        bfalert_info(0, "--> vcpu::setup::osxsave on");
+    }
+    else {
+        bfalert_info(0, "--> vcpu::setup::osxsave off");
     }
 
     if (extended_feature_flags::subleaf0::ebx::smep::is_enabled()) {
@@ -1452,7 +1456,8 @@ void
 vcpu::set_cr4(uint64_t val) noexcept
 {
     vmcs_n::cr4_read_shadow::set(val);
-    vmcs_n::guest_cr4::set(val | m_global_state->ia32_vmx_cr4_fixed0);
+    // vmcs_n::guest_cr4::set(val | m_global_state->ia32_vmx_cr4_fixed0);
+    vmcs_n::guest_cr4::set(val | m_global_state->ia32_vmx_cr4_fixed0 | ::intel_x64::cr4::osxsave::mask);
 }
 
 uint64_t

@@ -253,6 +253,8 @@ control_register_handler::control_register_handler(
 {
     using namespace vmcs_n;
 
+    bfalert_info(0, "--> control_register_handler");
+
     vcpu->add_handler(
         exit_reason::basic_exit_reason::control_register_accesses,
     {&control_register_handler::handle, this}
@@ -333,6 +335,9 @@ control_register_handler::enable_wrcr4_exiting(
     vmcs_n::value_type mask)
 {
     mask |= m_vcpu->global_state()->ia32_vmx_cr4_fixed0;
+    mask |= ::intel_x64::cr4::osxsave::mask;
+
+    bfalert_nhex(0, " control_register_handler::enable_wrcr4_exiting::mask ", mask);
     vmcs_n::cr4_guest_host_mask::set(mask);
 }
 
@@ -385,6 +390,8 @@ control_register_handler::execute_wrcr4(
     emulate_rdgpr(vcpu);
     vcpu->set_gr2(vcpu->cr4());
     vcpu->set_cr4(vcpu->gr1());
+    bfalert_nhex(0, "--> mov_to_cr -> execute_wrcr4 old ", vcpu->gr2());
+    bfalert_nhex(0, "--> mov_to_cr -> execute_wrcr4 new ", vmcs_n::guest_cr4::get());
 }
 
 // -----------------------------------------------------------------------------
