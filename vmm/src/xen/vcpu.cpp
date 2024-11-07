@@ -461,7 +461,8 @@ bool xen_vcpu::handle_platform_op()
     }
     default:
         bfalert_ndec(0, "Unimplemented platform op", xpf->cmd);
-        return false;
+        m_uv_vcpu->set_rax(-ENOSYS);
+        return true;
     }
 }
 
