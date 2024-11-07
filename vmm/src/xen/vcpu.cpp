@@ -656,7 +656,12 @@ bool xen_vcpu::handle_sched_op()
          * see how we got here.
          */
         m_uv_vcpu->set_rax(-EINVAL);
-        return true;
+
+        if (++m_max_shutdown_events == 3) {
+            return false;
+        } else {
+            return true;
+        }
     }
     default:
         printv("%s: cmd=%lu unhandled\n", __func__, cmd);

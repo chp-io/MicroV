@@ -161,6 +161,8 @@ private:
     uint32_t m_apicid{};
     uint32_t m_acpiid{};
 
+    uint32_t m_max_shutdown_events{};
+
 public:
     ~xen_vcpu() = default;
     xen_vcpu(xen_vcpu &&) = delete;
