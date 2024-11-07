@@ -657,7 +657,7 @@ bool xen_vcpu::handle_sched_op()
          */
         m_uv_vcpu->set_rax(-EINVAL);
 
-        if (++m_max_shutdown_events == 3) {
+        if (++m_max_shutdown_events == 100) {
             return false;
         } else {
             return true;
