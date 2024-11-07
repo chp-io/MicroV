@@ -15,7 +15,7 @@ jobs:
   clang-format:
     runs-on: ubuntu-20.04
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
       with:
         path: microv
 
@@ -47,7 +47,7 @@ jobs:
   build-efi:
     runs-on: ubuntu-20.04
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
       with:
         path: microv
 
@@ -70,7 +70,7 @@ jobs:
         make
       shell: bash
 
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v4
       with:
         name: microv_efi
         path: |
@@ -79,7 +79,7 @@ jobs:
   build-efi-debug:
     runs-on: ubuntu-20.04
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
       with:
         path: microv
 
@@ -106,7 +106,7 @@ jobs:
         make -j
       shell: bash
 
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v4
       with:
         name: microv_efi_debug
         path: |
@@ -115,7 +115,7 @@ jobs:
   build-efi-noeth:
     runs-on: ubuntu-20.04
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
       with:
         path: microv
 
@@ -139,7 +139,7 @@ jobs:
         make
       shell: bash
 
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v4
       with:
         name: microv_efi_noeth
         path: |
@@ -148,13 +148,13 @@ jobs:
   build-userpace:
     runs-on: windows-2019
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
       with:
         path: microv
 
     - name: Setup MSBuild (PATH)
       id: setup_msbuild_path
-      uses: microsoft/setup-msbuild@v1.0.2
+      uses: microsoft/setup-msbuild@v2
 
     - name: Setup
       run: |
@@ -176,7 +176,7 @@ jobs:
         & msbuild /p:Configuration=Release /p:Platform=x64 /p:TargetVersion=Windows10 hypervisor.sln
       shell: pwsh
 
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v4
       with:
         name: microv_userspace
         path: |
@@ -185,13 +185,13 @@ jobs:
   build-userpace-debug:
     runs-on: windows-2019
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
       with:
         path: microv
 
     - name: Setup MSBuild (PATH)
       id: setup_msbuild_path
-      uses: microsoft/setup-msbuild@v1.0.2
+      uses: microsoft/setup-msbuild@v2
 
     - name: Setup
       run: |
@@ -213,7 +213,7 @@ jobs:
         & msbuild /p:Configuration=Release /p:Platform=x64 /p:TargetVersion=Windows10 hypervisor.sln
       shell: pwsh
 
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v4
       with:
         name: microv_userspace_debug
         path: |
@@ -222,13 +222,13 @@ jobs:
   build-drivers:
     runs-on: windows-2019
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
       with:
         path: microv
 
     - name: Setup MSBuild (PATH)
       id: setup_msbuild_path
-      uses: microsoft/setup-msbuild@v1.0.2
+      uses: microsoft/setup-msbuild@v2
 
     - name: Setup
       run: |
@@ -249,7 +249,7 @@ jobs:
         .\build-all.ps1 -RegisterBasedAbi
       shell: pwsh
 
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v4
       with:
         name: microv_drivers
         path: |
@@ -271,13 +271,13 @@ jobs:
   build-drivers-nocerts:
     runs-on: windows-2019
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
       with:
         path: microv
 
     - name: Setup MSBuild (PATH)
       id: setup_msbuild_path
-      uses: microsoft/setup-msbuild@v1.0.2
+      uses: microsoft/setup-msbuild@v2
 
     - name: Setup
       run: |
@@ -302,7 +302,7 @@ jobs:
         .\build-all.ps1 -RegisterBasedAbi
       shell: pwsh
 
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v4
       with:
         name: microv_drivers_nocerts
         path: |
